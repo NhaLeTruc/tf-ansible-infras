@@ -1,0 +1,116 @@
+---
+# Prepares a TLS key pair for testing Vault, signed by the
+# insecure root and intermediate CA
+- hosts: all
+  become: true
+  vars:
+    root_ca_dir: "./testca/root"
+    intermediate_ca_dir: "./testca/intermediate"
+    local_staging_dir: "./testca/vault"
+    vault_tls_dir: "/opt/vault/tls"
+  roles:
+    - role: common
+      vars:
+        common_packages:
+          - curl
+          - unzip
+          - vim
+          - ca-certificates
+          - python3-pip
+
+  tasks:
+    # necessary to run modules in community.crypto collection
+    - name: Install required dependencies
+      pip:
+        name: cryptography>=1.2.3
+        state: present
+
+    - name: Create Vault TLS directory
+      file:
+        path: "{{ vault_tls_dir }}"
+        mode: 0755
+        owner: "vault"
+        group: "vault"
+        state: directory
+
+    - name: Generate Vault private key
+      community.crypto.openssl_privatekey:
+        path: "{{ vault_tls_dir }}/key.pem"
+        mode: 0400
+        owner: "vault"
+        group: "vault"
+
+    - name: Generate vault CSR
+      community.crypto.openssl_csr:
+        path: "{{ vault_tls_dir }}/host.csr"
+        privatekey_path: "{{ vault_tls_dir }}/key.pem"
+        basic_constraints:
+          - "CA:FALSE"
+        basic_constraints_critical: true
+        common_name: "vault"
+        subject_alt_name:
+          - "IP:{{ ansible_host }}"
+          - "DNS:{{ ansible_fqdn }}"
+          - "IP:127.0.0.1"
+          - "DNS:vault.service.consul"
+        mode: 0640
+        owner: "vault"
+        group: "vault"
+
+    - name: Copy remote vault CSR to host
+      fetch:
+        src: "{{ vault_tls_dir }}/host.csr"
+        dest: "{{ local_staging_dir }}/vault.csr"
+        flat: true
+
+    - name: Sign Vault certificate with intermediate CA
+      community.crypto.x509_certificate:
+        path: "{{ local_staging_dir }}/vault.crt"
+        csr_path: "{{ local_staging_dir }}/vault.csr"
+        provider: ownca
+        ownca_path: "{{ intermediate_ca_dir }}/int.crt"
+        ownca_privatekey_path: "{{ intermediate_ca_dir }}/int_key.pem"
+        ownca_not_after: "+365d"
+        mode: 0640
+      # Because delegate_to becomes sudo by default, we want to
+      # set delegated user to the one currently running playbook.
+      # We don't use become_user as it does not recognize UIDs
+      # or {{ ansible_user_id }} fact.
+      delegate_to: localhost
+      become: false
+      delegate_facts: true
+      remote_user: "{{ ansible_user_id }}"
+
+    - name: Create Vault trust store directory
+      file:
+        path: "/usr/share/ca-certificates/vault"
+        mode: 0755
+        owner: "vault"
+        group: "vault"
+        state: directory
+
+    - name: Copy CA chain to remote
+      copy:
+        src: "{{ local_staging_dir }}/ca-chain.crt"
+        dest: "/usr/share/ca-certificates/vault/ca.crt"
+        mode: "0640"
+        owner: "vault"
+        group: "vault"
+
+    - name: Copy signed certificate to remote
+      copy:
+        src: "{{ local_staging_dir }}/vault.crt"
+        dest: "{{ vault_tls_dir }}/vault.crt"
+        mode: "0640"
+        owner: "vault"
+        group: "vault"
+
+    - name: Add certificate-chain to remote ca-certificates.conf
+      lineinfile:
+        path: "/etc/ca-certificates.conf"
+        line: "vault/ca.crt"
+
+    - name: Update remote trust store
+      command: update-ca-certificates
+      register: update_cert_output
+      changed_when: '"1 added" in update_cert_output.stdout'

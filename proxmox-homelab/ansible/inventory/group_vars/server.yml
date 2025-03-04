@@ -1,0 +1,7 @@
+---
+consul_vault_addr: "https://{{ server_ip }}:8200"
+consul_common_name: "server.dc1.consul"
+consul_ip_sans: "127.0.0.1, {{ server_ip }}"
+nomad_vault_addr: "https://{{ server_ip }}:8200"
+nomad_common_name: "server.global.nomad"
+nomad_ip_sans: "127.0.0.1, {{ server_ip }}"

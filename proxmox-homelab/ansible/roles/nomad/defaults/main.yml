@@ -1,0 +1,34 @@
+---
+nomad_config_dir: "/etc/nomad.d"
+nomad_data_dir: "/opt/nomad/data"
+nomad_tls_dir: "{{ nomad_data_dir }}/tls"
+consul_template_config_dir: "/etc/consul-template"
+
+# vault
+nomad_vault_integration: true
+
+# consul
+nomad_consul_register: true
+
+# server
+nomad_server: true
+nomad_bootstrap_expect: 1
+
+# client
+nomad_client: false
+nomad_server_ip: ""
+
+# cni_plugins
+cni_plugin_version: "1.3.0"
+cni_plugin_arch_map:
+  armv7l: arm
+  x86_64: amd64
+cni_plugin_arch: "{{ cni_plugin_arch_map[ansible_architecture] }}"
+cni_plugin_tar: "cni-plugins-{{ ansible_system | lower }}-{{ cni_plugin_arch }}-v{{ cni_plugin_version }}.tgz"
+
+# certificate generation
+nomad_vault_addr: "https://localhost:8200"
+nomad_common_name: "{{ 'server' if nomad_server else 'client' }}.global.nomad"
+nomad_alt_names: "nomad.service.consul"
+nomad_ttl: "24h"
+nomad_ip_sans: "127.0.0.1"

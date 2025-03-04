@@ -1,0 +1,42 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Include default vars
+      include_vars:
+        dir: "{{ role_directory }}/defaults/"
+        extensions:
+          - 'yml'
+          - 'yaml'
+      vars:
+        role_directory: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') }}/roles/{{ lookup('env', 'MOLECULE_SCENARIO_NAME') }}"
+
+    - name: Vault service started
+      systemd:
+        name: vault
+        state: started
+        enabled: true
+
+    - name: Check Vault status
+      command: vault status -format=json
+      register: vault_status
+      changed_when: false
+      failed_when:
+        - vault_status.rc >= 1
+
+    - name: Check Vault login as admin
+      command: vault login -method=userpass username=admin password={{ vault_admin_password }}
+      register: vault_login
+      changed_when: false
+      failed_when: "'Success' not in vault_login.stdout"
+
+    # - debug:
+    #     msg: "{{ vault_login }}"
+
+    - name: Vault-agent service started
+      systemd:
+        name: vault-agent
+        state: started
+        enabled: true
