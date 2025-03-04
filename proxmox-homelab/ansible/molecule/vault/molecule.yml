@@ -1,0 +1,23 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: vagrant
+  provider:
+    name: libvirt
+  default_box: "debian/bullseye64"
+platforms:
+  - name: server
+    box: "debian/bullseye64"
+    config_options:
+      synced_folder: false
+    groups:
+      - mol_server
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: "../../roles"
+    ANSIBLE_STDOUT_CALLBACK: yaml
+verifier:
+  name: ansible

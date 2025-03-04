@@ -1,0 +1,19 @@
+[Unit]
+Description=Consul-template
+Wants=network-online.target vault-agent.service
+After=network-online.target vault-agent.service
+StartLimitInterval=180
+StartLimitBurst=3
+
+[Service]
+#User=consul-template
+#Group=consul-template
+ExecStart=/usr/bin/consul-template -config="{{ consul_template_config_dir }}/consul-template.hcl" -log-level=info
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,5 @@
+[cluster:children]
+server
+client
+prod
+dev

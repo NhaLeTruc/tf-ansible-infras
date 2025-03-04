@@ -1,0 +1,64 @@
+vault {
+  address     = "https://{{ vault_server_fqdn }}:8200"
+  ca_cert     = "{{ vault_ca_cert_dir }}/ca.crt"
+  client_cert = "{{ vault_tls_dir }}/agent.crt"
+  client_key  = "{{ vault_tls_dir }}/agent_key.pem"
+
+  retry {
+    num_retries = 3
+  }
+}
+
+auto_auth {
+  method "cert" {
+    name = "{{ ansible_fqdn }}"
+    mount_path = "auth/agent"
+    exit_on_err = true
+
+    config = {
+      ca_cert     = "{{ vault_ca_cert_dir }}/ca.crt"
+      client_cert = "{{ vault_tls_dir }}/agent.crt"
+      client_key  = "{{ vault_tls_dir }}/agent_key.pem"
+      reload = true
+    }
+  }
+
+  sink "file" {
+    config = {
+      path = "{{ vault_data_dir }}/.vault-token"
+      mode = 0400
+    }
+  }
+}
+
+cache {}
+
+template_config {
+  exit_on_retry_failure = true
+}
+
+# renew vault-agent's own auth cert
+template {
+  contents    = <<EOF
+{{ '{{' }} with pkiCert "pki_int/issue/auth" "common_name=agent-{{ ansible_fqdn }}@global.vault" "ttl=30d" {{ '}}' }}
+{{ '{{' }} .Cert {{ '}}' }}
+{{ '{{' }} if .Key {{ '}}' }}
+{{ '{{' }} .Key | writeToFile "{{ vault_tls_dir }}/agent_key.pem" "vault" "vault" "0600" {{ '}}' }}
+{{ '{{' }} end {{ '}}' }}
+{{ '{{' }} end {{ '}}' }}
+EOF
+  destination = "{{ vault_tls_dir }}/agent.crt"
+  exec = {
+    command = [
+      "{{ vault_data_dir }}/token_action.sh",
+      "write",
+      "auth/agent/certs/{{ ansible_fqdn }}",
+      "certificate=@{{ vault_tls_dir }}/agent.crt",
+    ]
+  }
+  user  = "vault"
+  group = "vault"
+  perms = 0600
+
+  error_on_missing_key = true
+}
