@@ -17,7 +17,7 @@ qm create 902 \
     --scsi0 "local:0,import-from=/root/debian-11-generic-amd64-20250303-2040.qcow2" \
     --bootdisk scsi0 \
     --boot "order=scsi0" \
-    --ide1 "local:cloudinit" \
+    --ide1 "local-lvm:cloudinit" \
     --ipconfig0 "ip=dhcp" \
     --ciuser admin\
     --cipassword debian\
