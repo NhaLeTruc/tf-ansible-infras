@@ -2,6 +2,12 @@
 
 Tested on 5th March 2025 Proxmox server.
 
+## Install requirements
+
+```bash
+ansible-galaxy install -r requirements.yml
+```
+
 ## Create VM manually on PROXMOX shell
 
 ```bash
@@ -52,3 +58,13 @@ Run **/bin/generate-vars** after installing **python-hcl2**. This would create v
 Proxmox couldn't create golden image template yet at the moment. So Packer will clone the manually created template then configurate it instead.
 
 Crucially **qemu-guest-agent** will be installed into the golden image template. This allow terraform to utilize it in create the cluster's nodes.
+
+## Check Proxmox VM config info
+
+```bash
+pvesh get /nodes/pve/qemu/$VMID/config --output-format json-pretty
+
+terraform providers
+
+terraform -upgrade
+```
