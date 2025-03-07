@@ -1,8 +1,8 @@
 ---
 # server_ip: "{{ hostvars[groups['dev'] | difference(groups['client']) | first]['ansible_default_ipv4']['address'] }}"
-server_ip: "10.10.10.130"
-client_ip: "10.10.10.131"
-ansible_user: "debian"
+server_ip: "192.168.1.6"
+client_ip: "192.168.1.7"
+ansible_user: "admin"
 
 # ssl
 ssl_remote_tls_dir: "/opt/vault/tls"
