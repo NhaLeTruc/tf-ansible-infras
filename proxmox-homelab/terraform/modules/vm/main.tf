@@ -57,7 +57,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   vga {
-    enabled = true
+    # enabled = true
     memory  = 16
     type    = "serial0"
   }
