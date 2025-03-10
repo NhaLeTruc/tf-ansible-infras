@@ -33,9 +33,19 @@ qm create 902 \
     --memory 4096 \
     --agent 1
 
-qm resize 902 scsi0 15G
+qm resize 902 scsi0 10G
 
 qm template 902
+
+```
+
+## Filling in variables for packers and terraform
+
+Run **/bin/generate-vars** after installing **python-hcl2**. This would create variable files in designated directories. Make sure to add them into *.gitignore*.
+
+Packer will ssh into the VM above clone and do effectively these tasks
+
+```bash
 
 # Configure Cloud-Init/IP Config & User/Password
 # Login and install qemu-guest-agent
@@ -48,10 +58,6 @@ systemctl start qemu-guest-agent
 systemctl status qemu-guest-agent
 
 ```
-
-## Filling in variables for packers and terraform
-
-Run **/bin/generate-vars** after installing **python-hcl2**. This would create variable files in designated directories. Make sure to add them into *.gitignore*.
 
 ## Run Packer to build base image
 

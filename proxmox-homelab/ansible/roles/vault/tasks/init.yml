@@ -103,10 +103,10 @@
 # Note that Terraform must be installed on Ansible host
 
 - set_fact:
-    vault_terraform_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/terraform/vault"
+    vault_terraform_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/proxmox-homelab/terraform/vault"
 
 - set_fact:
-    vault_terraform_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/certs"
+    vault_terraform_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/proxmox-homelab/certs"
 
 - name: Copy Vault CA cert to Ansible host
   fetch:
