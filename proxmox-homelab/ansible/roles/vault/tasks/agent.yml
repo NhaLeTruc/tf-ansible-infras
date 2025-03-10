@@ -96,7 +96,7 @@
     body_format: json
     return_content: true
   register: vault_ansible_token_raw
-  no_log: true
+  no_log: false
   changed_when: false
   delegate_to: localhost
 
