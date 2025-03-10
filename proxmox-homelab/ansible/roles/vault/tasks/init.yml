@@ -106,7 +106,7 @@
     vault_terraform_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/proxmox-homelab/terraform/vault"
 
 - set_fact:
-    vault_terraform_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/proxmox-homelab/certs"
+    vault_terraform_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/certs"
 
 - name: Copy Vault CA cert to Ansible host
   fetch:

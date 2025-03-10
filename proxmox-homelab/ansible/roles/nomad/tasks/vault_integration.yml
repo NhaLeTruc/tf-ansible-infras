@@ -17,7 +17,7 @@
     group: nomad
 
 - set_fact:
-    local_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/proxmox-homelab/certs"
+    local_cert_dir: "{{ lookup('pipe', 'git rev-parse --show-toplevel') }}/certs"
 
 - name: Login with Ansible auth cert
   become: false
