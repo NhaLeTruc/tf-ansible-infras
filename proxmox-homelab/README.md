@@ -8,6 +8,16 @@ Tested on 5th March 2025 Proxmox server.
 ansible-galaxy install -r requirements.yml
 ```
 
+Generate A self-signed certificate, private key for TLS encryption of Vault in /certs/ directory:
+
+```bash
+openssl req -newkey rsa:2048 -keyout ansible_key.pem -out ansible.csr
+
+openssl x509 -signkey ansible_key.pem -in ansible.csr -req -days 365 -out ansible.crt
+
+chmod 600 ansible_key.pem ansible.crt ansible.csr
+```
+
 ## Create VM manually on PROXMOX shell
 
 ```bash
