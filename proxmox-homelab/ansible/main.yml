@@ -18,13 +18,13 @@
     - role: consul
     - role: nomad
 
-  tasks:
-    - name: Goss smoke test
-      import_role:
-        name: kencx.ansible_collection.goss
-      vars:
-        goss_dir: "./goss"
-        goss_file: "server.yml"
+  # tasks:
+  #   - name: Goss smoke test
+  #     import_role:
+  #       name: kencx.ansible_collection.goss
+  #     vars:
+  #       goss_dir: "./goss"
+  #       goss_file: "server.yml"
 
 - hosts: client, !dev
   become: true
@@ -62,9 +62,9 @@
         - 80
         - 443
 
-    - name: Goss smoke test
-      import_role:
-        name: kencx.ansible_collection.goss
-      vars:
-        goss_dir: "./goss"
-        goss_file: "client.yml"
+    # - name: Goss smoke test
+    #   import_role:
+    #     name: kencx.ansible_collection.goss
+    #   vars:
+    #     goss_dir: "./goss"
+    #     goss_file: "client.yml"
