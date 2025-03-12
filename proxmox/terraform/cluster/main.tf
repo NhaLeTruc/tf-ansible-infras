@@ -1,10 +1,10 @@
-module "server" {
+module "master" {
   source = "../modules/vm"
   for_each = {
     for idx, vm in var.servers : idx + 1 => vm
   }
 
-  hostname    = "server-${each.key}"
+  hostname    = "master-${each.key}"
   vmid        = each.value.id
   tags        = var.tags
   target_node = var.target_node
@@ -27,54 +27,65 @@ module "server" {
   ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
-module "client" {
-  source = "../modules/vm"
-  for_each = {
-    for idx, vm in var.clients : idx + 1 => vm
+resource "proxmox_virtual_environment_vm" "nodes" {
+  count = lookup(var.node_count, "workers", 0)
+  name  = "cluster-worker-${count.index}"
+  description = "Managed by Terraform"
+  tags = ["terraform", "ubuntu", "worker"]
+
+  node_name = "pve"
+  vm_id = var.new_vm_id + count.index
+
+  clone {
+    vm_id = var.template_id
+    full = true
   }
 
-  hostname    = "client-${each.key}"
-  vmid        = each.value.id
-  tags        = var.tags
-  target_node = var.target_node
+  agent {
+    enabled = true
+  }
 
-  clone_template_id = var.template_id
-  onboot            = var.onboot
-  started           = var.started
+  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+  stop_on_destroy = true
 
-  cores   = each.value.cores
-  sockets = each.value.sockets
-  memory  = each.value.memory
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  }
 
-  disk_size      = each.value.disk_size
-  disk_datastore = var.disk_datastore
+  memory {
+    dedicated = 4096
+    floating  = 4096 # set equal to dedicated to enable ballooning
+  }
 
-  ip_address = each.value.ip_address
-  ip_gateway = var.ip_gateway
-
-  ssh_user        = var.ssh_user
-  ssh_public_keys = [file(var.ssh_public_key_file)]
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+  }
 }
 
 resource "local_file" "tf_ansible_inventory_file" {
   content         = <<-EOF
-[server]
+[master]
 %{for vm in var.servers~}
 ${split("/", vm.ip_address)[0]}
 %{endfor~}
 
-[client]
-%{for vm in var.clients~}
-${split("/", vm.ip_address)[0]}
-%{endfor~}
+[workers]
+# %{for vm in var.clients~}
+# ${split("/", vm.ip_address)[0]}
+# %{endfor~}
 
 [prod]
 %{for vm in var.servers~}
 ${split("/", vm.ip_address)[0]}
 %{endfor~}
-%{for vm in var.clients~}
-${split("/", vm.ip_address)[0]}
-%{endfor~}
+# %{for vm in var.clients~}
+# ${split("/", vm.ip_address)[0]}
+# %{endfor~}
 EOF
   filename        = "${path.module}/tf_ansible_inventory"
   file_permission = "0644"
