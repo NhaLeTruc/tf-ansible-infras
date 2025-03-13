@@ -27,7 +27,7 @@ module "master" {
   ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
-resource "proxmox_virtual_environment_vm" "nodes" {
+resource "proxmox_virtual_environment_vm" "workers" {
   count = lookup(var.node_count, "workers", 0)
   name  = "cluster-worker-${count.index}"
   description = "Managed by Terraform"
@@ -68,24 +68,23 @@ resource "proxmox_virtual_environment_vm" "nodes" {
 }
 
 resource "local_file" "tf_ansible_inventory_file" {
+  depends_on = [
+    module.master,
+    proxmox_virtual_environment_vm.workers
+  ]
+
   content         = <<-EOF
 [master]
-%{for vm in var.servers~}
-${split("/", vm.ip_address)[0]}
-%{endfor~}
+${join("\n", [for master in module.master : master.ipv4_addresses])}
 
 [workers]
-# %{for vm in var.clients~}
-# ${split("/", vm.ip_address)[0]}
-# %{endfor~}
+${join("\n", [for worker in roxmox_virtual_environment_vm.workers : worker.ipv4_addresses])}
+# jsonencode(proxmox_virtual_environment_vm.master_nodes[*].ipv4_addresses[0])
 
 [prod]
-%{for vm in var.servers~}
-${split("/", vm.ip_address)[0]}
-%{endfor~}
-# %{for vm in var.clients~}
-# ${split("/", vm.ip_address)[0]}
-# %{endfor~}
+${join("\n", [for master in module.master : master.ipv4_addresses])}
+${join("\n", [for worker in roxmox_virtual_environment_vm.workers : worker.ipv4_addresses])}
+
 EOF
   filename        = "${path.module}/tf_ansible_inventory"
   file_permission = "0644"
