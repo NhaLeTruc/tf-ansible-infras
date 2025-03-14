@@ -65,6 +65,10 @@ resource "proxmox_virtual_environment_vm" "workers" {
       }
     }
   }
+
+  timeouts {
+    create = "160m"
+  }
 }
 
 resource "local_file" "tf_ansible_inventory_file" {
@@ -75,16 +79,18 @@ resource "local_file" "tf_ansible_inventory_file" {
 
   content         = <<-EOF
 [master]
-${join("\n", [for master in module.master : master.ipv4_addresses])}
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
 
 [workers]
-${join("\n", [for worker in roxmox_virtual_environment_vm.workers : worker.ipv4_addresses])}
-# jsonencode(proxmox_virtual_environment_vm.master_nodes[*].ipv4_addresses[0])
+${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
 
 [prod]
-${join("\n", [for master in module.master : master.ipv4_addresses])}
-${join("\n", [for worker in roxmox_virtual_environment_vm.workers : worker.ipv4_addresses])}
-
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
+${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
 EOF
   filename        = "${path.module}/tf_ansible_inventory"
   file_permission = "0644"
