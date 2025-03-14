@@ -85,4 +85,8 @@ resource "proxmox_virtual_environment_vm" "vm" {
       initialization[0].user_account
     ]
   }
+
+  timeouts {
+    create = "160m"
+  }
 }
