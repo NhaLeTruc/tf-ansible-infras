@@ -39,6 +39,7 @@ resource "proxmox_virtual_environment_vm" "workers" {
   clone {
     vm_id = var.template_id
     full = true
+    retries = 3
   }
 
   agent {
@@ -66,9 +67,6 @@ resource "proxmox_virtual_environment_vm" "workers" {
     }
   }
 
-  timeouts {
-    create = "160m"
-  }
 }
 
 resource "local_file" "tf_ansible_inventory_file" {
