@@ -86,7 +86,4 @@ resource "proxmox_virtual_environment_vm" "vm" {
     ]
   }
 
-  timeouts {
-    create = "160m"
-  }
 }
