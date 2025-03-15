@@ -1,0 +1,14 @@
+---
+# File: RedHat.yml - Red Hat OS variables for Consul
+
+consul_os_packages:
+  - python3-libselinux
+  - unzip
+
+consul_repo_prerequisites:
+  - yum-utils
+
+consul_repo_url: "{{ 'https://rpm.releases.hashicorp.com/fedora/hashicorp.repo' if ansible_distribution == 'Fedora' else
+  'https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo' }}"
+
+dnsmasq_package: dnsmasq

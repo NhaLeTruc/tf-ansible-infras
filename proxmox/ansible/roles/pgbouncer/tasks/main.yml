@@ -1,0 +1,235 @@
+---
+# Debian
+- name: Install pgbouncer package
+  ansible.builtin.package:
+    name: pgbouncer
+    state: latest
+  register: package_status
+  until: package_status is success
+  delay: 5
+  retries: 3
+  environment: "{{ proxy_env | default({}) }}"
+  when: ansible_os_family == "Debian"
+  tags: pgbouncer_install, pgbouncer
+
+# RedHat
+- name: Install pgbouncer package
+  ansible.builtin.dnf:
+    name: pgbouncer
+    state: latest
+    disablerepo: AppStream
+  register: dnf_status
+  until: dnf_status is success
+  delay: 5
+  retries: 3
+  environment: "{{ proxy_env | default({}) }}"
+  when: ansible_os_family == "RedHat"
+  tags: pgbouncer_install, pgbouncer
+
+- name: Ensure config directory "{{ pgbouncer_conf_dir }}" exist
+  ansible.builtin.file:
+    path: "{{ pgbouncer_conf_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+  tags: pgbouncer_conf, pgbouncer
+
+- name: Ensure log directory "{{ pgbouncer_log_dir }}" exist
+  ansible.builtin.file:
+    path: "{{ pgbouncer_log_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+  tags: pgbouncer_conf, pgbouncer
+
+- name: Check if pgbouncer systemd service file exists
+  ansible.builtin.stat:
+    path: /etc/systemd/system/pgbouncer.service
+  register: pgbouncer_systemd_service
+  tags: pgbouncer_service, pgbouncer
+
+- name: Stop and disable standard init script
+  ansible.builtin.service:
+    name: pgbouncer
+    state: stopped
+    enabled: false
+  when:
+    - ansible_os_family == "Debian"
+    - not pgbouncer_systemd_service.stat.exists
+  tags: pgbouncer_service, pgbouncer
+
+- name: Configure pgbouncer systemd service file
+  ansible.builtin.template:
+    src: templates/pgbouncer.service.j2
+    dest: "/etc/systemd/system/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.service"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+  loop_control:
+    index_var: idx
+    label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+  notify: "restart pgbouncer"
+  tags: pgbouncer_service, pgbouncer
+
+- name: Ensure pgbouncer service is enabled
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: "pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}"
+    enabled: true
+  loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+  loop_control:
+    index_var: idx
+    label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+  tags: pgbouncer_service, pgbouncer
+
+- block:
+    # workaround for pgbouncer from postgrespro repo
+    - name: Check that /usr/bin/pgbouncer is exists
+      ansible.builtin.stat:
+        path: /usr/bin/pgbouncer
+      register: pgbouncer_bin
+
+    - name: create a symlink to /usr/sbin/pgbouncer
+      ansible.builtin.file:
+        src: /usr/sbin/pgbouncer
+        dest: /usr/bin/pgbouncer
+        owner: root
+        group: root
+        state: link
+      when: not pgbouncer_bin.stat.exists
+  when:
+    - ansible_os_family == "RedHat"
+    - postgresql_packages|join(" ") is search("postgrespro")
+  tags: pgbouncer_service, pgbouncer
+
+- name: Enable log rotation with logrotate
+  ansible.builtin.copy:
+    content: |
+      {{ pgbouncer_log_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.log {
+        daily
+        rotate 7
+        copytruncate
+        delaycompress
+        compress
+        notifempty
+        missingok
+        su root root
+      }
+    dest: "/etc/logrotate.d/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}"
+  loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+  loop_control:
+    index_var: idx
+    label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+  tags: pgbouncer_logrotate, pgbouncer
+
+- name: Configure pgbouncer.ini
+  ansible.builtin.template:
+    src: templates/pgbouncer.ini.j2
+    dest: "{{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+  loop_control:
+    index_var: idx
+    label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+  notify: "reload pgbouncer"
+  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  tags: pgbouncer_conf, pgbouncer
+
+- name: Create userlist.txt
+  ansible.builtin.template:
+    src: templates/userlist.txt.j2
+    dest: "{{ pgbouncer_conf_dir }}/userlist.txt"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  when:
+    - (existing_pgcluster is not defined or not existing_pgcluster|bool)
+    - not pgbouncer_auth_user|bool
+  tags: pgbouncer
+
+- block:
+    # for add_pgnode.yml
+    - name: Fetch pgbouncer.ini file from master
+      run_once: true
+      ansible.builtin.fetch:
+        src: "{{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+        dest: files/
+        validate_checksum: true
+        flat: true
+      loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+      loop_control:
+        index_var: idx
+        label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+      delegate_to: "{{ groups.master[0] }}"
+
+    - name: Fetch userlist.txt conf file from master
+      run_once: true
+      ansible.builtin.fetch:
+        src: "{{ pgbouncer_conf_dir }}/userlist.txt"
+        dest: files/
+        validate_checksum: true
+        flat: true
+      delegate_to: "{{ groups.master[0] }}"
+      when: not pgbouncer_auth_user|bool
+
+    - name: Copy pgbouncer.ini file to replica
+      ansible.builtin.copy:
+        src: "files/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+        dest: "{{ pgbouncer_conf_dir }}"
+        owner: postgres
+        group: postgres
+        mode: "0640"
+      loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+      loop_control:
+        index_var: idx
+        label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+
+    - name: Copy userlist.txt conf file to replica
+      ansible.builtin.copy:
+        src: files/userlist.txt
+        dest: "{{ pgbouncer_conf_dir }}"
+        owner: postgres
+        group: postgres
+        mode: "0640"
+      when: not pgbouncer_auth_user|bool
+
+    - name: Remove pgbouncer.ini file from localhost
+      become: false
+      run_once: true
+      ansible.builtin.file:
+        path: "files/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+        state: absent
+      loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+      loop_control:
+        index_var: idx
+        label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+      delegate_to: localhost
+
+    - name: Remove userlist.txt conf file from localhost
+      become: false
+      run_once: true
+      ansible.builtin.file:
+        path: files/userlist.txt
+        state: absent
+      delegate_to: localhost
+      when: not pgbouncer_auth_user|bool
+
+    - name: Prepare pgbouncer.ini conf file (replace "listen_addr")
+      ansible.builtin.lineinfile:
+        path: "{{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+        regexp: "^listen_addr ="
+        line: "listen_addr = {{ pgbouncer_listen_addr }}"
+        backrefs: true
+      loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+      loop_control:
+        index_var: idx
+        label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+      notify: "reload pgbouncer"
+      when: pgbouncer_listen_addr != "0.0.0.0"
+  when: existing_pgcluster is defined and existing_pgcluster|bool
+  tags: pgbouncer_conf, pgbouncer

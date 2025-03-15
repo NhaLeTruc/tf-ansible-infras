@@ -1,0 +1,143 @@
+---
+# File: install_linux_repo.yml - package installation tasks for Consul
+
+- name: Install OS packages
+  ansible.builtin.package:
+    name: "{{ consul_repo_prerequisites }}"
+    state: present
+  register: package_status
+  until: package_status is success
+  delay: 5
+  retries: 3
+  become: true
+  when: consul_os_repo_prerequisites | default(true) | bool
+  tags: installation
+
+- name: Gather the package facts
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Clean up previous consul data
+  block:
+    - name: Populate service facts
+      ansible.builtin.service_facts:
+
+    - name: Stop service consul, if running
+      ansible.builtin.service:
+        name: consul
+        state: stopped
+      when: ansible_facts.services | join is match('.*consul.*')
+
+    - name: Remove consul service unit files from previous installation
+      ansible.builtin.file:
+        path: "{{ service_unit_item }}"
+        state: absent
+      loop:
+        - /usr/lib/systemd/system/consul.service
+        - /etc/init.d/consul
+      loop_control:
+        loop_var: service_unit_item
+
+    - name: Remove the user 'consul'
+      ansible.builtin.user:
+        name: consul
+        state: absent
+        remove: true
+
+  when: "'consul' not in ansible_facts.packages"
+  become: true
+
+- name: Install repository
+  block:
+    - name: Add hashicorp repository
+      ansible.builtin.command: "yum-config-manager --add-repo {{ consul_repo_url }}"
+      args:
+        creates: /etc/yum.repos.d/hashicorp.repo
+      when: >
+        ansible_distribution|lower == 'redhat' or
+        ansible_distribution|lower == 'centos' or
+        ansible_distribution|lower == 'fedora' or
+        ansible_distribution|lower == 'amazon' or
+        ansible_distribution|lower == 'rocky' or
+        ansible_distribution|lower == 'almalinux'
+
+    - name: Make sure the python3-debian package is present
+      ansible.builtin.apt:
+        pkg:
+          - python3-debian
+        state: present
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "Debian"
+
+    - name: Add hashicorp repository
+      ansible.builtin.deb822_repository:
+        name: "{{ consul_repo_url.split('//')[1] | replace('.', '-') }}"
+        types: "deb"
+        uris: "{{ consul_repo_url }}"
+        signed_by: "{{ consul_repo_url }}/gpg"
+        suites: "{{ ansible_distribution_release }}"
+        components: "main"
+        enabled: true
+        state: present
+      when: "ansible_os_family|lower == 'debian'"
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "Debian"
+
+  when: "ansible_os_family|lower in [ 'debian', 'redhat' ]"
+  become: true
+
+- name: Install consul package
+  ansible.builtin.package:
+    name: consul
+    state: latest
+  register: package_status
+  until: package_status is success
+  delay: 5
+  retries: 3
+  become: true
+
+- name: Create a directory /etc/systemd/system/consul.service.d
+  ansible.builtin.file:
+    path: /etc/systemd/system/consul.service.d
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+  register: systemd_override
+  become: true
+  when: ansible_service_mgr == "systemd"
+
+- name: Override systemd service params
+  ansible.builtin.template:
+    src: consul_systemd_service.override.j2
+    dest: /etc/systemd/system/consul.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: systemd_override
+  become: true
+  notify:
+    - systemctl daemon-reload
+    - restart consul
+  when:
+    - ansible_service_mgr == "systemd"
+    - consul_install_from_repo | bool
+
+- name: Flush handlers
+  ansible.builtin.meta: flush_handlers
+
+- name: As, this role work with json conf file only - delete file /etc/consul.d/consul.hcl
+  ansible.builtin.file:
+    path: /etc/consul.d/consul.hcl
+    state: absent
+  become: true

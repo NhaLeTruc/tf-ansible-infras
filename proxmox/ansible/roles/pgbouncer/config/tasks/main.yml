@@ -1,0 +1,82 @@
+---
+- name: Ensure config directory "{{ pgbouncer_conf_dir }}" exist
+  ansible.builtin.file:
+    path: "{{ pgbouncer_conf_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+  tags: pgbouncer, pgbouncer_conf
+
+- name: Update pgbouncer.ini
+  ansible.builtin.template:
+    src: ../templates/pgbouncer.ini.j2
+    dest: "{{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  loop: "{{ range(0, (pgbouncer_processes | default(1) | int)) | list }}"
+  loop_control:
+    index_var: idx
+    label: "{{ 'pgbouncer' if idx == 0 else 'pgbouncer-%d' % (idx + 1) }}"
+  notify: "reload pgbouncer"
+  when: existing_pgcluster is not defined or not existing_pgcluster|bool
+  tags: pgbouncer, pgbouncer_conf
+
+# if pgbouncer_auth_user is 'false'
+- block:
+    - name: Get users and password md5 from pg_shadow
+      run_once: true
+      become: true
+      become_user: postgres
+      ansible.builtin.command: >-
+        {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d postgres -tAXc
+        "SELECT concat('\"', usename, '\" \"', passwd, '\"') FROM pg_shadow where usename != '{{ patroni_replication_username }}'"
+      register: pg_shadow_result
+      changed_when: false
+      delegate_to: "{{ groups.master[0] }}"
+
+    - name: "Generate {{ pgbouncer_conf_dir }}/userlist.txt"
+      become: true
+      become_user: postgres
+      ansible.builtin.copy:
+        content: |
+          {{ pg_shadow_result.stdout }}
+        dest: "{{ pgbouncer_conf_dir }}/userlist.txt"
+      notify: "reload pgbouncer"
+      when:
+        - pg_shadow_result.rc == 0
+        - pg_shadow_result.stdout is defined
+        - pg_shadow_result.stdout | length > 0
+  when: not pgbouncer_auth_user|bool
+  tags: pgbouncer, pgbouncer_conf, pgbouncer_generate_userlist
+
+# if pgbouncer_auth_user is 'true'
+- block:
+    - name: "Check if 'user_search' function exists"
+      become: true
+      become_user: postgres
+      ansible.builtin.command: >-
+        {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d {{ pgbouncer_auth_dbname }} -tAXc
+        "select exists(select proname from pg_proc where proname='user_search')"
+      register: exists_func_user
+      when: (is_master | bool and patroni_standby_cluster.host | default('') | length < 1) # do not perform on the Standby Cluster leader
+      changed_when: false
+
+    - name: "Create 'user_search' function for pgbouncer 'auth_query' option"
+      become: true
+      become_user: postgres
+      ansible.builtin.command: >-
+        {{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U {{ patroni_superuser_username }} -d {{ pgbouncer_auth_dbname }} -tAXc
+        "CREATE FUNCTION user_search(uname TEXT) RETURNS TABLE (usename name, passwd text) AS
+        $$
+        SELECT usename, passwd FROM pg_shadow WHERE usename=$1;
+        $$
+        LANGUAGE sql SECURITY DEFINER;
+        REVOKE ALL ON FUNCTION user_search(uname TEXT) FROM public;
+        GRANT EXECUTE ON FUNCTION user_search(uname TEXT) TO {{ pgbouncer_auth_username }}"
+      when:
+        - (is_master | bool and patroni_standby_cluster.host | default('') | length < 1) # do not perform on the Standby Cluster leader
+        - exists_func_user.stdout == "f"
+  when: pgbouncer_auth_user|bool
+  tags: pgbouncer, pgbouncer_conf, pgbouncer_auth_query
