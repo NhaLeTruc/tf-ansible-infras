@@ -1,0 +1,26 @@
+---
+- name: Perform switchover of the leader for the Patroni cluster "{{ patroni_cluster_name }}"
+  ansible.builtin.uri:
+    url: http://{{ inventory_hostname }}:{{ patroni_restapi_port }}/switchover
+    method: POST
+    user: "{{ patroni_restapi_username | default(omit) }}"
+    password: "{{ patroni_restapi_password | default(omit) }}"
+    body: '{"leader":"{{ ansible_hostname }}"}'
+    body_format: json
+  register: patroni_switchover_result
+  until: patroni_switchover_result.status == 200
+  retries: 300
+  delay: 2
+  environment:
+    no_proxy: "{{ inventory_hostname }}"
+
+- name: Make sure that the Patroni is healthy and is a replica
+  ansible.builtin.uri:
+    url: http://{{ inventory_hostname }}:{{ patroni_restapi_port }}/replica
+    status_code: 200
+  register: patroni_replica_result
+  until: patroni_replica_result.status == 200
+  retries: 300
+  delay: 2
+  environment:
+    no_proxy: "{{ inventory_hostname }}"

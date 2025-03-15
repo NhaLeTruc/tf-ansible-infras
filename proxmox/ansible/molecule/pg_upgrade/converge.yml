@@ -1,0 +1,82 @@
+---
+- name: Converge
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Set variables for Patroni cluster deployment test
+      ansible.builtin.set_fact:
+        ansible_become_method: su # Override become_method
+        firewall_enabled_at_boot: false
+        firewall_enable_ipv6: false # Added to prevent test failures in CI.
+        swap_file_create: false # Added to prevent test failures in CI.
+        sysctl_set: false # Added to prevent test failures in CI.
+        nameservers: ["8.8.8.8", "9.9.9.9"]
+        timezone: "Etc/UTC"
+        with_haproxy_load_balancing: true
+        dcs_type: "{{ ['etcd', 'consul'] | random }}" # Set 'dcs_type' to either 'etcd' or 'consul' randomly
+        consul_node_role: server # if dcs_type: "consul"
+        consul_bootstrap_expect: true # if dcs_type: "consul"
+        postgresql_version: 16 # redefine the version to install for the upgrade test
+        pgbouncer_processes: 4 # Test multiple pgbouncer processes (so_reuseport)
+        cacheable: true
+      delegate_to: localhost
+      run_once: true # noqa run-once
+
+    # Consul package for OracleLinux missing in HashiCorp repository
+    # Only the installation of a binary file is supported
+    - name: "Set variables: 'consul_install_from_repo: false' and 'patroni_installation_method: pip'"
+      ansible.builtin.set_fact:
+        consul_install_from_repo: false # whether to install consul from repository as opposed to installing the binary directly
+        patroni_installation_method: "pip" # the "rpm" method is supported only for consul installed from the repository
+      when:
+        - dcs_type == "consul"
+        - ansible_distribution == "OracleLinux"
+
+    - name: Set variables for custom PostgreSQL data and WAL directory test
+      ansible.builtin.set_fact:
+        postgresql_data_dir: "/pgdata/{{ postgresql_version }}/main"
+        postgresql_wal_dir: "/pgwal/{{ postgresql_version }}/pg_wal"
+
+    - name: Set variables for TimescaleDB cluster deployment test
+      ansible.builtin.set_fact:
+        enable_timescale: true
+
+    - name: Set variables for PostgreSQL upgrade test
+      ansible.builtin.set_fact:
+        pg_old_version: 16
+        pg_new_version: 17
+
+    - name: Add repository GPG key
+      ansible.builtin.command: "rpm --import https://repo.almalinux.org/almalinux/RPM-GPG-KEY-AlmaLinux-{{ ansible_distribution_major_version }}"
+      when: ansible_distribution == "AlmaLinux"
+
+    - name: Update all system packages
+      ansible.builtin.include_role:
+        name: ../../roles/update
+        tasks_from: system
+
+    - name: Install openssh-server package
+      become: true
+      ansible.builtin.package:
+        name: openssh-server
+        state: present
+
+    - name: Start ssh service
+      become: true
+      ansible.builtin.systemd:
+        name: "{{ 'ssh' if ansible_os_family == 'Debian' else 'sshd' }}"
+        state: started
+        enabled: true
+
+    - name: Delete "/run/nologin" file (if exists)
+      become: true
+      ansible.builtin.file:
+        path: /run/nologin
+        state: absent
+
+- name: Deploy PostgreSQL Cluster
+  ansible.builtin.import_playbook: ../../deploy_pgcluster.yml
+
+- name: PostgreSQL upgrade test
+  ansible.builtin.import_playbook: ../../pg_upgrade.yml

@@ -1,0 +1,39 @@
+---
+# Update dnf cache
+- name: Update dnf cache
+  ansible.builtin.shell: dnf clean all && dnf -y makecache
+  args:
+    executable: /bin/bash
+  register: dnf_status
+  until: dnf_status is success
+  delay: 5
+  retries: 3
+  when: ansible_os_family == "RedHat"
+
+# Update apt cache
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  when: ansible_os_family == "Debian"
+
+# Install PostgreSQL packages
+- name: "Install PostgreSQL {{ pg_new_version }} packages"
+  ansible.builtin.package:
+    name: "{{ item }}"
+    state: latest
+  loop: "{{ pg_new_packages }}"
+  register: package_status
+  until: package_status is success
+  delay: 5
+  retries: 3
+
+# Install Extensions packages
+- name: "Install Extensions packages for PostgreSQL {{ pg_new_version }}"
+  ansible.builtin.import_tasks: "../../packages/tasks/extensions.yml"
+  vars:
+    pg_version: "{{ pg_new_version }}"

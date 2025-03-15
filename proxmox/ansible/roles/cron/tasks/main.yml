@@ -1,0 +1,67 @@
+---
+# tasks file for cron
+
+- name: Make sure that the cronie package is installed
+  ansible.builtin.package:
+    name: cronie
+    state: present
+  register: package_status
+  until: package_status is success
+  delay: 5
+  retries: 3
+  environment: "{{ proxy_env | default({}) }}"
+  when:
+    - cron_jobs is defined and cron_jobs | length > 0
+    - ansible_os_family == "RedHat"
+  tags: cron
+
+- name: Make sure that the cron package is installed
+  ansible.builtin.apt:
+    name: cron
+    state: present
+  register: apt_status
+  until: apt_status is success
+  delay: 5
+  retries: 3
+  environment: "{{ proxy_env | default({}) }}"
+  when:
+    - cron_jobs is defined and cron_jobs | length > 0
+    - ansible_os_family == "Debian"
+  tags: cron
+
+- name: Add cron jobs
+  ansible.builtin.cron:
+    cron_file: "{{ item.file | default('') }}"
+    user: "{{ item.user | default('postgres') }}"
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    name: "{{ item.name }}"
+    disabled: "{{ item.disabled | default(False) }}"
+    state: "{{ item.state | default('present') }}"
+    job: "{{ item.job }}"
+  loop: "{{ cron_jobs }}"
+  when:
+    - cron_jobs is defined and cron_jobs | length > 0
+    - remove_postgres is undefined
+  tags: cron
+
+- name: Uninstall cron jobs
+  ansible.builtin.cron:
+    cron_file: "{{ item.file | default('') }}"
+    user: "{{ item.user | default('postgres') }}"
+    minute: "{{ item.minute | default('*') }}"
+    hour: "{{ item.hour | default('*') }}"
+    day: "{{ item.day | default('*') }}"
+    month: "{{ item.month | default('*') }}"
+    weekday: "{{ item.weekday | default('*') }}"
+    name: "{{ item.name }}"
+    state: "absent"
+    job: "{{ item.job }}"
+  loop: "{{ cron_jobs }}"
+  when:
+    - cron_jobs is defined and cron_jobs | length > 0
+    - remove_postgres is defined and remove_postgres | bool
+  tags: cron, uninstall

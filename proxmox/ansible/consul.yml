@@ -1,0 +1,145 @@
+---
+- name: consul.yml | Configure Consul instances
+  hosts: consul_instances
+  become: true
+  become_method: sudo
+  any_errors_fatal: true
+  gather_facts: true
+  environment: "{{ proxy_env | default({}) }}"
+
+  pre_tasks:
+    - name: Include main variables
+      ansible.builtin.include_vars: "vars/main.yml"
+      tags: always
+
+    - name: Include system variables
+      ansible.builtin.include_vars: "vars/system.yml"
+      tags: always
+
+    - name: Include OS-specific variables
+      ansible.builtin.include_vars: "vars/{{ ansible_os_family }}.yml"
+      tags: always
+
+    - name: Check if the consul role requirements (ansible.utils) are installed
+      ansible.builtin.command: ansible-galaxy collection list ansible.utils
+      changed_when: false
+      failed_when: false
+      register: ansible_utils_result
+      delegate_to: localhost
+      run_once: true # noqa run-once
+
+    - name: Consul role requirements
+      ansible.builtin.fail:
+        msg:
+          - "Please install consul role requirements (ansible.utils)"
+          - "ansible-galaxy install -r roles/consul/requirements.yml"
+      delegate_to: localhost
+      run_once: true # noqa run-once
+      when:
+        - ansible_utils_result.stderr is defined
+        - ansible_utils_result.stderr is search("unable to find")
+
+    - name: Make sure the unzip package are present on the control host
+      ansible.builtin.package:
+        name: unzip
+        state: present
+      register: package_status
+      until: package_status is success
+      delay: 5
+      retries: 3
+      delegate_to: localhost
+      run_once: true # noqa run-once
+      when: ansible_distribution != "MacOSX"
+
+    - name: Make sure the python3-pip package are present on the control host
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+      register: package_status
+      until: package_status is success
+      delay: 5
+      retries: 3
+      delegate_to: localhost
+      run_once: true # noqa run-once
+      when: ansible_distribution != "MacOSX"
+
+    - name: Install netaddr dependency on the control host
+      ansible.builtin.pip:
+        name: netaddr
+        executable: pip3
+      become: false
+      environment:
+        PIP_BREAK_SYSTEM_PACKAGES: "1"
+      delegate_to: localhost
+      run_once: true # noqa run-once
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "Debian" and installation_method == "repo"
+
+    - name: Make sure the gnupg and apt-transport-https packages are present
+      ansible.builtin.apt:
+        pkg:
+          - gnupg
+          - apt-transport-https
+        state: present
+      register: apt_status
+      until: apt_status is success
+      delay: 5
+      retries: 3
+      when: ansible_os_family == "Debian" and installation_method == "repo"
+
+    - name: Make sure the python3-pip package are present
+      ansible.builtin.package:
+        name: python3-pip
+        state: present
+      register: package_status
+      until: package_status is success
+      delay: 5
+      retries: 3
+
+    - name: Build a firewall_ports_dynamic_var
+      ansible.builtin.set_fact:
+        firewall_ports_dynamic_var: "{{ firewall_ports_dynamic_var | default([]) + (firewall_allowed_tcp_ports_for[item] | default([])) }}"
+      loop: "{{ hostvars[inventory_hostname].group_names }}"
+      when: firewall_enabled_at_boot | bool
+      tags: firewall
+
+    - name: Build a firewall_rules_dynamic_var
+      ansible.builtin.set_fact:
+        firewall_rules_dynamic_var: "{{ firewall_rules_dynamic_var | default([]) + (firewall_additional_rules_for[item] | default([])) }}"
+      loop: "{{ hostvars[inventory_hostname].group_names }}"
+      when: firewall_enabled_at_boot | bool
+      tags: firewall
+
+    - name: Add a nameserver entry poining to localhost for dnsmasq
+      ansible.builtin.set_fact:
+        nameservers: "{{ ['127.0.0.1'] + (nameservers | default([])) }}"
+      when: dcs_type == "consul" and consul_dnsmasq_enable | bool and ('127.0.0.1' not in (nameservers | default([])))
+
+    - name: Redefine the consul_dnsmasq_servers variable
+      ansible.builtin.set_fact:
+        consul_dnsmasq_servers: "{{ consul_dnsmasq_servers | reject('equalto', '127.0.0.1') | list }}"
+      when: dcs_type == "consul" and consul_dnsmasq_enable | bool and ('127.0.0.1' in (consul_dnsmasq_servers | default([])))
+
+  roles:
+    - role: ansible-role-firewall
+      vars:
+        firewall_allowed_tcp_ports: "{{ firewall_ports_dynamic_var | default([]) | unique }}"
+        firewall_additional_rules: "{{ firewall_rules_dynamic_var | default([]) | unique }}"
+      when: firewall_enabled_at_boot|bool
+      tags: firewall
+
+    - role: hostname
+    - role: resolv_conf
+    - role: etc_hosts
+    - role: timezone
+    - role: ntp
+
+    - role: consul

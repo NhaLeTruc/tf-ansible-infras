@@ -1,0 +1,27 @@
+[Unit]
+Description=pgBouncer connection pooling for PostgreSQL
+After=syslog.target network.target
+
+[Service]
+Type=forking
+
+User=postgres
+Group=postgres
+
+RuntimeDirectory=pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}
+RuntimeDirectoryMode=0755
+
+{% if ansible_os_family == "Debian" %}
+ExecStart=/usr/sbin/pgbouncer -d {{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini
+{% endif %}
+{% if ansible_os_family == "RedHat" %}
+ExecStart=/usr/bin/pgbouncer -d {{ pgbouncer_conf_dir }}/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}.ini
+{% endif %}
+ExecReload=/bin/kill -SIGHUP $MAINPID
+PIDFile=/run/pgbouncer{{ '-%d' % (idx + 1) if idx > 0 else '' }}/pgbouncer.pid
+Restart=on-failure
+
+LimitNOFILE=100000
+
+[Install]
+WantedBy=multi-user.target
