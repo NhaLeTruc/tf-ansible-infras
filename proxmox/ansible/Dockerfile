@@ -1,5 +1,4 @@
 FROM debian:bookworm-slim
-LABEL maintainer="Vitaliy Kukharik vitabaks@gmail.com"
 
 USER root
 
