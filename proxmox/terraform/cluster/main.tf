@@ -82,13 +82,90 @@ ${split("/", vm.ip_address)[0]}
 %{endfor~}
 
 [workers]
-${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]}
+%{endfor~}
 
 [prod]
 %{for vm in var.servers~}
 ${split("/", vm.ip_address)[0]}
 %{endfor~}
 ${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
+# Please specify the ip addresses and connection settings for your environment
+# The specified ip addresses will be used to listen by the cluster components.
+# Attention! Specify private IP addresses so that the cluster does not listen a public IP addresses.
+# For deploying via public IPs, add 'ansible_host=public_ip_address' variable for each node.
+#
+# "postgresql_exists=true" if PostgreSQL is already exists and running
+# "hostname=" variable is optional (used to change the server name)
+# "new_node=true" to add a new server to an existing cluster using the add_pgnode.yml playbook
+# balancer_tags="key=value" the Balancer tags for the /replica, /sync, /async endpoints. Must match 'patroni_tags'.
+# patroni_tags="key=value" the Patroni tags in "key=value" format separated by commas.
+# patroni_replicatefrom="<hostname>" the Patroni node to replicate from (cascading replication).
+
+# if dcs_exists: false and dcs_type: "etcd"
+[etcd_cluster]  # recommendation: 3, or 5-7 nodes
+#10.128.64.140
+${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
+
+# if dcs_exists: false and dcs_type: "consul"
+[consul_instances]  # recommendation: 3 or 5-7 nodes
+#10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]} consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
+%{endfor~}
+#10.128.64.144 consul_node_role=client consul_datacenter=dc2
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]} consul_node_role=client consul_datacenter=dc2
+%{endfor~}
+
+# if with_haproxy_load_balancing: true
+[balancers]
+#10.128.64.140 # balancer_tags="datacenter=dc1"
+#10.128.64.145 # balancer_tags="datacenter=dc2" new_node=true
+${join("\n", [for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ip[1])])}
+
+# PostgreSQL nodes
+[master]
+#10.128.64.140 hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
+%{endfor~}
+
+[replica]
+#10.128.64.142 hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]} hostname=pgnode03 postgresql_exists=false # patroni_tags="datacenter=dc1"
+%{endfor~}
+#10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+%{endfor~}
+#10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+%{for ip in proxmox_virtual_environment_vm.workers.*.ipv4_addresses~}
+${ip[1]} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+%{endfor~}
+
+[postgres_cluster:children]
+master
+replica
+
+# if pgbackrest_install: true and "repo_host" is set
+[pgbackrest]  # optional (Dedicated Repository Host)
+#10.128.64.110
+
+[pgbackrest:vars]
+#ansible_user='postgres'
+#ansible_ssh_pass='secretpassword'
+
+# Connection settings
+[all:vars]
+ansible_connection='ssh'
+ansible_ssh_port='22'
+#ansible_user='root'
+#ansible_ssh_pass='secretpassword'  # "sshpass" package is required for use "ansible_ssh_pass"
+#ansible_ssh_private_key_file=
+#ansible_python_interpreter='/usr/bin/python3'
 EOF
   filename        = "${path.module}/tf_ansible_inventory"
   file_permission = "0644"
