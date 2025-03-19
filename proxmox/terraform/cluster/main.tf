@@ -101,7 +101,7 @@ ${ip} consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
 %{endfor~}
 #10.128.64.144 consul_node_role=client consul_datacenter=dc2
 %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip[1]} consul_node_role=client consul_datacenter=dc2
+${ip} consul_node_role=client consul_datacenter=dc2
 %{endfor~}
 
 # if with_haproxy_load_balancing: true
@@ -120,15 +120,15 @@ ${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patr
 [replica]
 #10.128.64.142 hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip[1]} hostname=pgnode03 postgresql_exists=false # patroni_tags="datacenter=dc1"
+${ip} hostname=pgnode03 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{endfor~}
 #10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
 %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip[1]} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
 %{endfor~}
 #10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
 %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip[1]} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
 %{endfor~}
 
 [postgres_cluster:children]
