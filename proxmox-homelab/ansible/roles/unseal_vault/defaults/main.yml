@@ -1,9 +1,0 @@
----
-unseal_vault_port: 8200
-unseal_vault_addr: "http://localhost:8200"
-
-unseal_store: ""
-unseal_keys_files: []
-unseal_keys: []
-unseal_bw_password: ""
-unseal_bw_keys_names: []
