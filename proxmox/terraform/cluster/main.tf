@@ -152,6 +152,6 @@ ansible_ssh_port='22'
 #ansible_ssh_private_key_file=
 #ansible_python_interpreter='/usr/bin/python3'
 EOF
-  filename        = "${path.root}/ansible/tf_ansible_inventory"
+  filename        = "../../ansible/tf_ansible_inventory"
   file_permission = "0644"
 }
