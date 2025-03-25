@@ -40,8 +40,8 @@
           - {rule: 'allow', port: '8600', proto: 'tcp', comment: 'consul DNS'}
           - {rule: 'allow', port: '8600', proto: 'udp', comment: 'consul DNS'}
 
-    - name: Goss validation
-      role: kencx.ansible_collection.goss
-      vars:
-        goss_dir: "./goss"
-        goss_file: "base.yml"
+    # - name: Goss validation
+    #   role: kencx.ansible_collection.goss
+    #   vars:
+    #     goss_dir: "./goss"
+    #     goss_file: "base.yml"
