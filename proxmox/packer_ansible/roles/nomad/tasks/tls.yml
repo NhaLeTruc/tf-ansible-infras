@@ -1,0 +1,83 @@
+---
+- name: Check if Nomad TLS certificate exists
+  stat:
+    path: "{{ nomad_tls_dir }}/cert.crt"
+  register: nomad_cert
+  changed_when: false
+
+- set_fact:
+    cert_role: "{{ 'server' if nomad_server else 'client' }}"
+
+# TODO Generate client certs for CLI, UI
+- name: Create CA, certificate and private key for Nomad TLS
+  block:
+    - name: Issue new certificate
+      shell:
+        cmd: |
+          vault write -format=json pki_int/issue/{{ cert_role }} \
+          "common_name={{ nomad_common_name }}" \
+          "ttl={{ nomad_ttl }}" \
+          "alt_names=localhost,{{ nomad_alt_names }}" \
+          "ip_sans={{ nomad_ip_sans }}"
+      environment:
+        VAULT_ADDR: "{{ nomad_vault_addr }}"
+        VAULT_TOKEN: "{{ nomad_ansible_token }}"
+      register: nomad_tls_raw
+
+    - set_fact:
+        nomad_tls_json: "{{ nomad_tls_raw.stdout | from_json }}"
+      when: nomad_tls_raw is defined and nomad_tls_raw.stdout is defined
+
+    - name: Create certificate
+      copy:
+        content: "{{ nomad_tls_json.data.certificate }}"
+        dest: "{{ nomad_tls_dir }}/cert.crt"
+        mode: 0600
+        owner: nomad
+        group: nomad
+      when: nomad_tls_json is defined and nomad_tls_json.data is defined
+
+    - name: Create private key
+      copy:
+        content: "{{ nomad_tls_json.data.private_key }}"
+        dest: "{{ nomad_tls_dir }}/key.pem"
+        mode: 0400
+        owner: nomad
+        group: nomad
+      when: nomad_tls_json is defined and nomad_tls_json.data is defined
+
+    - name: Create CA
+      copy:
+        content: "{{ nomad_tls_json.data.issuing_ca }}"
+        dest: "{{ nomad_tls_dir }}/ca.crt"
+        mode: 0640
+        owner: nomad
+        group: nomad
+      when: nomad_tls_json is defined and nomad_tls_json.data is defined
+  when: nomad_cert is defined and not nomad_cert.stat.exists
+
+- name: Add TLS template stanza to consul-template
+  blockinfile:
+    path: "{{ consul_template_config_dir }}/consul-template.hcl"
+    marker: "# {mark} Nomad TLS"
+    validate: consul-template -config=%s -parse-only
+    block: |
+      template {
+        contents = <<EOF
+      {{ '{{' }} with pkiCert "pki_int/issue/{{ cert_role }}" "common_name={{ nomad_common_name }}" "ttl={{ nomad_ttl }}" "alt_names=localhost,{{ nomad_alt_names }}" "ip_sans={{ nomad_ip_sans }}" {{ '}}' }}
+      {{ '{{' }} .Cert {{ '}}' }}
+      {{ '{{' }} if .CA {{ '}}' }}
+      {{ '{{' }} .CA | writeToFile "{{ nomad_tls_dir }}/ca.crt" "nomad" "nomad" "0600" {{ '}}' }}
+      {{ '{{' }} end {{ '}}' }}
+      {{ '{{' }} if .Key {{ '}}' }}
+      {{ '{{' }} .Key | writeToFile "{{ nomad_tls_dir }}/key.pem" "nomad" "nomad" "0400" {{ '}}' }}
+      {{ '{{' }} end {{ '}}' }}
+      {{ '{{' }} end {{ '}}' }}
+      EOF
+        destination = "{{ nomad_tls_dir }}/cert.crt"
+        perms = 0600
+        user = "nomad"
+        group = "nomad"
+        command = "date && if systemctl is-active nomad; then service nomad reload; fi"
+      }
+  notify: reload consul-template

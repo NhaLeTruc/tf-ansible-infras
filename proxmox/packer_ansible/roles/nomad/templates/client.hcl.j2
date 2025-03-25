@@ -1,0 +1,15 @@
+client {
+  enabled = true
+  servers = ["{{ nomad_server_ip }}"]
+}
+
+plugin "docker" {
+  config {
+    volumes {
+      enabled = true
+    }
+    gc {
+      image_delay = "10m"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+---
+# Write a new Nomad gossip key to Vault
+# This is generated on the first server node only. Subsequent server and client nodes
+# will use the existing secret
+- name: Save gossip key to Vault
+  shell:
+    cmd: |
+      if ! vault kv get -field=gossip_key kvv2/cluster/nomad_config >/dev/null 2>&1; then
+        vault kv put kvv2/cluster/nomad_config gossip_key=$(nomad operator gossip keyring generate)
+      else
+        echo "gossip_key present"
+      fi
+  environment:
+    VAULT_TOKEN: "{{ nomad_ansible_token }}"
+  register: prepare_gossip_key
+  changed_when: "'present' not in prepare_gossip_key.stdout"
+  when: nomad_server | bool
+  run_once: true
+
+# TODO Setup gossip key rotation with vault:
+# consul-template only triggers reload in consul, it does not renew the secret for us.
+# We need to run a cronjob to trigger this renewal manually. the secret also has no ttl
+# so old versions will never expire. requires helper-script
+- name: Add gossip key to Nomad configuration
+  blockinfile:
+    path: "{{ consul_template_config_dir }}/consul-template.hcl"
+    marker: "# {mark} Nomad gossip"
+    validate: consul-template -config=%s -parse-only
+    block: |
+      template {
+        contents = <<EOF
+      {% raw %}{{ with secret "kvv2/data/cluster/nomad_config" }}
+      server {
+        encrypt = "{{ .Data.data.gossip_key }}"
+      }
+      {{ end }}
+      {% endraw %}
+      EOF
+        destination = "{{ nomad_config_dir }}/gossip.hcl"
+        perms = 0600
+        user = "nomad"
+        group = "nomad"
+        error_on_missing_key = true
+        command = "date && if systemctl is-active nomad; then service nomad reload; fi"
+      }
+  notify: reload consul-template

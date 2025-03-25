@@ -1,0 +1,70 @@
+---
+- hosts: server, !dev
+  become: true
+  tags: server
+  pre_tasks:
+    - name: Wait for cloud-init
+      command: cloud-init status --wait
+      changed_when: false
+
+  roles:
+    - name: Create root, intermediate CA for Vault
+      role: kencx.ansible_collection.ssl
+      become: true
+      run_once: true
+
+    - role: vault
+    - role: consul-template
+    - role: consul
+    - role: nomad
+
+  # tasks:
+  #   - name: Goss smoke test
+  #     import_role:
+  #       name: kencx.ansible_collection.goss
+  #     vars:
+  #       goss_dir: "./goss"
+  #       goss_file: "server.yml"
+
+- hosts: client, !dev
+  become: true
+  tags: client
+  pre_tasks:
+    - name: Wait for cloud-init
+      command: cloud-init status --wait
+      changed_when: false
+
+  roles:
+    - name: Mount NFS shares on client
+      role: kencx.ansible_collection.nfs
+      tags: nfs
+
+    - role: vault
+      vars:
+        vault_server: false
+    - role: consul-template
+    - role: consul
+      vars:
+        consul_server: false
+        consul_client: true
+    - role: nomad
+      vars:
+        nomad_server: false
+        nomad_client: true
+
+  tasks:
+    - name: Allow HTTP, HTTPS ports on ufw
+      become: true
+      ufw:
+        rule: "allow"
+        port: "{{ item }}"
+      with_items:
+        - 80
+        - 443
+
+    # - name: Goss smoke test
+    #   import_role:
+    #     name: kencx.ansible_collection.goss
+    #   vars:
+    #     goss_dir: "./goss"
+    #     goss_file: "client.yml"
