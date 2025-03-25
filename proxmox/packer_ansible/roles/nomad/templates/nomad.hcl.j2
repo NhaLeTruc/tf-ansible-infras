@@ -1,0 +1,40 @@
+datacenter = "dc1"
+data_dir   = "{{ nomad_data_dir }}"
+bind_addr  = "0.0.0.0"
+
+tls {
+  http = true
+  rpc = true
+
+  ca_file = "{{ nomad_tls_dir }}/ca.crt"
+  cert_file = "{{ nomad_tls_dir }}/cert.crt"
+  key_file = "{{ nomad_tls_dir }}/key.pem"
+
+  verify_server_hostname = true
+  # false to allow consul healthcheck
+  verify_https_client = false
+}
+
+{% if nomad_vault_integration %}
+# vault token is set as env variable on server nodes only
+vault {
+  enabled = true
+  address = "{{ nomad_vault_addr }}"
+  create_from_role = "nomad_cluster"
+}
+{% endif %}
+
+{% if nomad_consul_register %}
+consul {
+  address      = "127.0.0.1:8500"
+  grpc_address = "127.0.0.1:8502"
+}
+{% endif %}
+
+telemetry {
+  collection_interval = "1s"
+  disable_hostname = true
+  prometheus_metrics = true
+  publish_allocation_metrics = true
+  publish_node_metrics=true
+}
