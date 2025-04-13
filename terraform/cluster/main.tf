@@ -1,3 +1,186 @@
+############################################
+## etcd_cluster
+############################################
+resource "proxmox_virtual_environment_vm" "etcd" {
+  count = lookup(var.node_count, "workers", 0)
+  name  = "cluster-worker-${count.index}"
+  description = "Managed by Terraform"
+  tags = ["terraform", "ubuntu", "worker"]
+
+  node_name = "pve"
+  vm_id = var.new_vm_id + count.index
+
+  clone {
+    vm_id = var.template_id
+    full = true
+    retries = 3
+  }
+
+  agent {
+    enabled = true
+  }
+
+  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+  stop_on_destroy = true
+
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  }
+
+  memory {
+    dedicated = 4096
+    floating  = 4096 # set equal to dedicated to enable ballooning
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+  }
+
+}
+
+############################################
+## consul_instances
+############################################
+resource "proxmox_virtual_environment_vm" "consul" {
+  count = lookup(var.node_count, "workers", 0)
+  name  = "cluster-worker-${count.index}"
+  description = "Managed by Terraform"
+  tags = ["terraform", "ubuntu", "worker"]
+
+  node_name = "pve"
+  vm_id = var.new_vm_id + count.index
+
+  clone {
+    vm_id = var.template_id
+    full = true
+    retries = 3
+  }
+
+  agent {
+    enabled = true
+  }
+
+  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+  stop_on_destroy = true
+
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  }
+
+  memory {
+    dedicated = 4096
+    floating  = 4096 # set equal to dedicated to enable ballooning
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+  }
+
+}
+
+############################################
+## balancers
+############################################
+resource "proxmox_virtual_environment_vm" "balancers" {
+  count = lookup(var.node_count, "workers", 0)
+  name  = "cluster-worker-${count.index}"
+  description = "Managed by Terraform"
+  tags = ["terraform", "ubuntu", "worker"]
+
+  node_name = "pve"
+  vm_id = var.new_vm_id + count.index
+
+  clone {
+    vm_id = var.template_id
+    full = true
+    retries = 3
+  }
+
+  agent {
+    enabled = true
+  }
+
+  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+  stop_on_destroy = true
+
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  }
+
+  memory {
+    dedicated = 4096
+    floating  = 4096 # set equal to dedicated to enable ballooning
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+  }
+
+}
+
+############################################
+## pgbackrest
+############################################
+resource "proxmox_virtual_environment_vm" "pgbackrest" {
+  count = lookup(var.node_count, "workers", 0)
+  name  = "cluster-worker-${count.index}"
+  description = "Managed by Terraform"
+  tags = ["terraform", "ubuntu", "worker"]
+
+  node_name = "pve"
+  vm_id = var.new_vm_id + count.index
+
+  clone {
+    vm_id = var.template_id
+    full = true
+    retries = 3
+  }
+
+  agent {
+    enabled = true
+  }
+
+  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+  stop_on_destroy = true
+
+  cpu {
+    cores = 2
+    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  }
+
+  memory {
+    dedicated = 4096
+    floating  = 4096 # set equal to dedicated to enable ballooning
+  }
+
+  initialization {
+    ip_config {
+      ipv4 {
+        address = "dhcp"
+      }
+    }
+  }
+
+}
+
+############################################
+## masters
+############################################
 module "master" {
   source = "../modules/vm"
   for_each = {
@@ -27,6 +210,9 @@ module "master" {
   ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
+############################################
+## workers
+############################################
 resource "proxmox_virtual_environment_vm" "workers" {
   count = lookup(var.node_count, "workers", 0)
   name  = "cluster-worker-${count.index}"
@@ -69,6 +255,9 @@ resource "proxmox_virtual_environment_vm" "workers" {
 
 }
 
+############################################
+## ansible_inventory
+############################################
 resource "local_file" "tf_ansible_inventory_file" {
   depends_on = [
     module.master,
