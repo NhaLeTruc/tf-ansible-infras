@@ -7,78 +7,20 @@ variable "proxmox_api_token_id" {
   sensitive = true
 }
 
-variable "node_count" {
-  type = map(string)
-  default = {
-    "masters" = 1
-    "workers"  = 2
-  }
-}
-
-variable "new_vm_id" {
-  type = number
-  default = 100
-}
-
-variable "target_node" {
-  type        = string
-  description = ""
-  default     = "pve"
-}
-
-variable "tags" {
-  type        = list(string)
-  description = "VM tags"
-  default     = ["prod"]
-}
-
 variable "template_id" {
   type        = number
   description = "Template ID to clone"
 }
 
-variable "onboot" {
-  type        = bool
-  description = "Start VM on boot"
-  default     = false
-}
+# variable "new_vm_id" {
+#   type = number
+#   default = 100
+# }
 
-variable "started" {
-  type        = bool
-  description = "Start VM on creation"
-  default     = true
-}
-
-variable "servers" {
-  type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
-  }))
-  default = []
-}
-
-variable "clients" {
-  type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
-  }))
-  default = []
-}
-
-variable "disk_datastore" {
-  type        = string
-  description = "Datastore on which to store disk"
-  default     = "volumes"
+variable "tags" {
+  type        = list(string)
+  description = "VM tags"
+  default     = ["dev"]
 }
 
 variable "control_ip_address" {
@@ -99,6 +41,12 @@ variable "ip_gateway" {
   }
 }
 
+variable "disk_datastore" {
+  type        = string
+  description = "Datastore on which to store disk"
+  default     = "volumes"
+}
+
 variable "ssh_user" {
   type        = string
   description = "SSH user"
@@ -108,3 +56,81 @@ variable "ssh_public_key_file" {
   type        = string
   description = "Public SSH key file"
 }
+
+variable "onboot" {
+  type        = bool
+  description = "Start VM on boot"
+  default     = false
+}
+
+variable "started" {
+  type        = bool
+  description = "Start VM on creation"
+  default     = true
+}
+
+variable "target_node" {
+  type        = string
+  description = ""
+  default     = "pve"
+}
+
+variable "masters" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
+variable "servers" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
+variable "balancers" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
+variable "backups" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
+# variable "node_count" {
+#   type = map(string)
+#   default = {
+#     "masters" = 1
+#     "workers"  = 2
+#   }
+# }
