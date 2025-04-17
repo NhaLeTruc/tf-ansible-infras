@@ -166,7 +166,6 @@ ${split("/", vm.ip_address)[0]}
 #10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
 #10.128.64.144 consul_node_role=client consul_datacenter=dc2
 
-
 # if with_haproxy_load_balancing: true
 [balancers]
 #10.128.64.140 # balancer_tags="datacenter=dc1"
