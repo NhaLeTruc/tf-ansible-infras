@@ -131,8 +131,10 @@ module "pgbackrest" {
 ############################################
 resource "local_file" "tf_ansible_inventory_file" {
   depends_on = [
-    module.master,
-    proxmox_virtual_environment_vm.workers
+    module.masters,
+    module.workers,
+    module.balancers,
+    module.pgbackrest
   ]
 
   content         = <<-EOF
@@ -151,25 +153,27 @@ resource "local_file" "tf_ansible_inventory_file" {
 # if dcs_exists: false and dcs_type: "etcd"
 [etcd_cluster]  # recommendation: 3, or 5-7 nodes
 #10.128.64.140
-${join("\n", [for ip in proxmox_virtual_environment_vm.masters.*.ipv4_addresses : join(",", ip[1])])}
-${join("\n", [for ip in proxmox_virtual_environment_vm.servers.*.ipv4_addresses : join(",", ip[1])])}
+%{for vm in var.masters~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
+
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
 
 # if dcs_exists: false and dcs_type: "consul"
 [consul_instances]  # recommendation: 3 or 5-7 nodes
-# 10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
-# %{for ip in [for ips in proxmox_virtual_environment_vm.masters.*.ipv4_addresses : join(",", ips[1])]~}
-# ${ip} consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
-# %{endfor~}
-# 10.128.64.144 consul_node_role=client consul_datacenter=dc2
-# %{for ip in [for ips in proxmox_virtual_environment_vm.servers.*.ipv4_addresses : join(",", ips[1])]~}
-# ${ip} consul_node_role=client consul_datacenter=dc2
-# %{endfor~}
+#10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
+#10.128.64.144 consul_node_role=client consul_datacenter=dc2
+
 
 # if with_haproxy_load_balancing: true
 [balancers]
 #10.128.64.140 # balancer_tags="datacenter=dc1"
 #10.128.64.145 # balancer_tags="datacenter=dc2" new_node=true
-${join("\n", [for ip in proxmox_virtual_environment_vm.balancers.*.ipv4_addresses : join(",", ip[1])])}
+%{for vm in var.balancers~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
 
 # PostgreSQL nodes
 [master]
@@ -180,26 +184,24 @@ ${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patr
 
 [replica]
 #10.128.64.142 hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
-%{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip} hostname=pgnode03 postgresql_exists=false # patroni_tags="datacenter=dc1"
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]} hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{endfor~}
-# #10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
-# %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-# ${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
-# %{endfor~}
-# #10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
-# %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-# ${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
-# %{endfor~}
+#10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+
+#10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+
 
 [postgres_cluster:children]
 master
 replica
 
-# if pgbackrest_install: true and "repo_host" is set
+#if pgbackrest_install: true and "repo_host" is set
 [pgbackrest]  # optional (Dedicated Repository Host)
 #10.128.64.110
-${join("\n", [for ip in proxmox_virtual_environment_vm.pgbackrest.*.ipv4_addresses : join(",", ip[1])])}
+%{for vm in var.backups~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
 
 [pgbackrest:vars]
 #ansible_user='postgres'
@@ -263,3 +265,10 @@ EOF
 #   }
 
 # }
+
+# {join("\n", [for ip in proxmox_virtual_environment_vm.masters.*.ipv4_addresses : join(",", ip[1])])}
+# 
+#
+# {for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
+# {ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+# {endfor~}
