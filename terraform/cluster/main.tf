@@ -1,145 +1,10 @@
 ############################################
-## distributed key-value stores
+## masters & distributed key-value stores
 ############################################
-resource "proxmox_virtual_environment_vm" "kvs" {
-  count = lookup(var.node_count, "workers", 0)
-  name  = "cluster-worker-${count.index}"
-  description = "Managed by Terraform"
-  tags = ["terraform", "ubuntu", "worker"]
-
-  node_name = "pve"
-  vm_id = var.new_vm_id + count.index
-
-  clone {
-    vm_id = var.template_id
-    full = true
-    retries = 3
-  }
-
-  agent {
-    enabled = true
-  }
-
-  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
-  stop_on_destroy = true
-
-  cpu {
-    cores = 2
-    type = "x86-64-v2-AES"  # recommended for modern CPUs
-  }
-
-  memory {
-    dedicated = 4096
-    floating  = 4096 # set equal to dedicated to enable ballooning
-  }
-
-  initialization {
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-}
-
-############################################
-## balancers
-############################################
-resource "proxmox_virtual_environment_vm" "balancers" {
-  count = lookup(var.node_count, "workers", 0)
-  name  = "cluster-worker-${count.index}"
-  description = "Managed by Terraform"
-  tags = ["terraform", "ubuntu", "worker"]
-
-  node_name = "pve"
-  vm_id = var.new_vm_id + count.index
-
-  clone {
-    vm_id = var.template_id
-    full = true
-    retries = 3
-  }
-
-  agent {
-    enabled = true
-  }
-
-  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
-  stop_on_destroy = true
-
-  cpu {
-    cores = 2
-    type = "x86-64-v2-AES"  # recommended for modern CPUs
-  }
-
-  memory {
-    dedicated = 4096
-    floating  = 4096 # set equal to dedicated to enable ballooning
-  }
-
-  initialization {
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-}
-
-############################################
-##  backup and restore
-############################################
-resource "proxmox_virtual_environment_vm" "pgbackrest" {
-  count = lookup(var.node_count, "workers", 0)
-  name  = "cluster-worker-${count.index}"
-  description = "Managed by Terraform"
-  tags = ["terraform", "ubuntu", "worker"]
-
-  node_name = "pve"
-  vm_id = var.new_vm_id + count.index
-
-  clone {
-    vm_id = var.template_id
-    full = true
-    retries = 3
-  }
-
-  agent {
-    enabled = true
-  }
-
-  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
-  stop_on_destroy = true
-
-  cpu {
-    cores = 2
-    type = "x86-64-v2-AES"  # recommended for modern CPUs
-  }
-
-  memory {
-    dedicated = 4096
-    floating  = 4096 # set equal to dedicated to enable ballooning
-  }
-
-  initialization {
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
-
-}
-
-############################################
-## masters
-############################################
-module "master" {
+module "masters" {
   source = "../modules/vm"
   for_each = {
-    for idx, vm in var.servers : idx + 1 => vm
+    for idx, vm in var.masters : idx + 1 => vm
   }
 
   hostname    = "master-${each.key}"
@@ -166,48 +31,99 @@ module "master" {
 }
 
 ############################################
-## workers
+## workers & distributed key-value stores
 ############################################
-resource "proxmox_virtual_environment_vm" "workers" {
-  count = lookup(var.node_count, "workers", 0)
-  name  = "cluster-worker-${count.index}"
-  description = "Managed by Terraform"
-  tags = ["terraform", "ubuntu", "worker"]
-
-  node_name = "pve"
-  vm_id = var.new_vm_id + count.index
-
-  clone {
-    vm_id = var.template_id
-    full = true
-    retries = 3
+module "workers" {
+  source = "../modules/vm"
+  for_each = {
+    for idx, vm in var.servers : idx + 1 => vm
   }
 
-  agent {
-    enabled = true
+  hostname    = "worker-${each.key}"
+  vmid        = each.value.id
+  tags        = var.tags
+  target_node = var.target_node
+
+  clone_template_id = var.template_id
+  onboot            = var.onboot
+  started           = var.started
+
+  cores   = each.value.cores
+  sockets = each.value.sockets
+  memory  = each.value.memory
+
+  disk_size      = each.value.disk_size
+  disk_datastore = var.disk_datastore
+
+  ip_address = each.value.ip_address
+  ip_gateway = var.ip_gateway
+
+  ssh_user        = var.ssh_user
+  ssh_public_keys = [file(var.ssh_public_key_file)]
+}
+
+############################################
+## balancers
+############################################
+module "balancers" {
+  source = "../modules/vm"
+  for_each = {
+    for idx, vm in var.balancers : idx + 1 => vm
   }
 
-  # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
-  stop_on_destroy = true
+  hostname    = "balancer-${each.key}"
+  vmid        = each.value.id
+  tags        = var.tags
+  target_node = var.target_node
 
-  cpu {
-    cores = 2
-    type = "x86-64-v2-AES"  # recommended for modern CPUs
+  clone_template_id = var.template_id
+  onboot            = var.onboot
+  started           = var.started
+
+  cores   = each.value.cores
+  sockets = each.value.sockets
+  memory  = each.value.memory
+
+  disk_size      = each.value.disk_size
+  disk_datastore = var.disk_datastore
+
+  ip_address = each.value.ip_address
+  ip_gateway = var.ip_gateway
+
+  ssh_user        = var.ssh_user
+  ssh_public_keys = [file(var.ssh_public_key_file)]
+}
+
+############################################
+## backup and restore
+############################################
+module "pgbackrest" {
+  source = "../modules/vm"
+  for_each = {
+    for idx, vm in var.backups : idx + 1 => vm
   }
 
-  memory {
-    dedicated = 4096
-    floating  = 4096 # set equal to dedicated to enable ballooning
-  }
+  hostname    = "pgbackrest-${each.key}"
+  vmid        = each.value.id
+  tags        = var.tags
+  target_node = var.target_node
 
-  initialization {
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
-  }
+  clone_template_id = var.template_id
+  onboot            = var.onboot
+  started           = var.started
 
+  cores   = each.value.cores
+  sockets = each.value.sockets
+  memory  = each.value.memory
+
+  disk_size      = each.value.disk_size
+  disk_datastore = var.disk_datastore
+
+  ip_address = each.value.ip_address
+  ip_gateway = var.ip_gateway
+
+  ssh_user        = var.ssh_user
+  ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
 ############################################
@@ -235,18 +151,19 @@ resource "local_file" "tf_ansible_inventory_file" {
 # if dcs_exists: false and dcs_type: "etcd"
 [etcd_cluster]  # recommendation: 3, or 5-7 nodes
 #10.128.64.140
-${join("\n", [for ip in proxmox_virtual_environment_vm.kvs.*.ipv4_addresses : join(",", ip[1])])}
+${join("\n", [for ip in proxmox_virtual_environment_vm.masters.*.ipv4_addresses : join(",", ip[1])])}
+${join("\n", [for ip in proxmox_virtual_environment_vm.servers.*.ipv4_addresses : join(",", ip[1])])}
 
 # if dcs_exists: false and dcs_type: "consul"
 [consul_instances]  # recommendation: 3 or 5-7 nodes
-#10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
-%{for ip in [for ips in proxmox_virtual_environment_vm.kvs.*.ipv4_addresses : join(",", ips[1])]~}
-${ip} consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
-%{endfor~}
-#10.128.64.144 consul_node_role=client consul_datacenter=dc2
-%{for ip in [for ips in proxmox_virtual_environment_vm.kvs.*.ipv4_addresses : join(",", ips[1])]~}
-${ip} consul_node_role=client consul_datacenter=dc2
-%{endfor~}
+# 10.128.64.140 consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
+# %{for ip in [for ips in proxmox_virtual_environment_vm.masters.*.ipv4_addresses : join(",", ips[1])]~}
+# ${ip} consul_node_role=server consul_bootstrap_expect=true consul_datacenter=dc1
+# %{endfor~}
+# 10.128.64.144 consul_node_role=client consul_datacenter=dc2
+# %{for ip in [for ips in proxmox_virtual_environment_vm.servers.*.ipv4_addresses : join(",", ips[1])]~}
+# ${ip} consul_node_role=client consul_datacenter=dc2
+# %{endfor~}
 
 # if with_haproxy_load_balancing: true
 [balancers]
@@ -257,7 +174,7 @@ ${join("\n", [for ip in proxmox_virtual_environment_vm.balancers.*.ipv4_addresse
 # PostgreSQL nodes
 [master]
 #10.128.64.140 hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
-%{for vm in var.servers~}
+%{for vm in var.masters~}
 ${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{endfor~}
 
@@ -266,14 +183,14 @@ ${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patr
 %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
 ${ip} hostname=pgnode03 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{endfor~}
-#10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
-%{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
-%{endfor~}
-#10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
-%{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
-${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
-%{endfor~}
+# #10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+# %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
+# ${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
+# %{endfor~}
+# #10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+# %{for ip in [for ips in proxmox_virtual_environment_vm.workers.*.ipv4_addresses : join(",", ips[1])]~}
+# ${ip} hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
+# %{endfor~}
 
 [postgres_cluster:children]
 master
@@ -297,6 +214,52 @@ ansible_ssh_port='22'
 #ansible_ssh_private_key_file=
 #ansible_python_interpreter='/usr/bin/python3'
 EOF
-  filename        = "../../postgres_ansible/tf_ansible_inventory"
+  filename        = "../../ansible/tf_ansible_inventory"
   file_permission = "0644"
 }
+
+
+###############################################################
+## Proxmox API timeouts frequently with large `count` values ##
+###############################################################
+# resource "proxmox_virtual_environment_vm" "workers" {
+#   count = lookup(var.node_count, "workers", 0)
+#   name  = "cluster-worker-${count.index}"
+#   description = "Managed by Terraform"
+#   tags = ["terraform", "ubuntu", "worker"]
+
+#   node_name = "pve"
+#   vm_id = var.new_vm_id + count.index
+
+#   clone {
+#     vm_id = var.template_id
+#     full = true
+#     retries = 3
+#   }
+
+#   agent {
+#     enabled = true
+#   }
+
+#   # if agent is not enabled, the VM may not be able to shutdown properly, and may need to be forced off
+#   stop_on_destroy = true
+
+#   cpu {
+#     cores = 2
+#     type = "x86-64-v2-AES"  # recommended for modern CPUs
+#   }
+
+#   memory {
+#     dedicated = 4096
+#     floating  = 4096 # set equal to dedicated to enable ballooning
+#   }
+
+#   initialization {
+#     ip_config {
+#       ipv4 {
+#         address = "dhcp"
+#       }
+#     }
+#   }
+
+# }
