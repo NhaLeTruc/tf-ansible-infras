@@ -47,15 +47,15 @@ variable "disk_datastore" {
   default     = "volumes"
 }
 
-variable "ssh_user" {
-  type        = string
-  description = "SSH user"
-}
+# variable "ssh_user" {
+#   type        = string
+#   description = "SSH user"
+# }
 
-variable "ssh_public_key_file" {
-  type        = string
-  description = "Public SSH key file"
-}
+# variable "ssh_public_key_file" {
+#   type        = string
+#   description = "Public SSH key file"
+# }
 
 variable "onboot" {
   type        = bool

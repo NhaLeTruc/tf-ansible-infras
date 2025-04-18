@@ -149,7 +149,7 @@ See the vars/[main.yml](./automation/vars/main.yml), [system.yml](./automation/v
 6. Try to connect to hosts
 
 ```bash
-ansible all -m ping
+ansible all -m ping -u debian
 ```
 
 7. Run playbook:

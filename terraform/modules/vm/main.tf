@@ -31,7 +31,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   disk {
-    interface    = "scsi0"
+    interface    = "scsi"
     datastore_id = var.disk_datastore
     size         = var.disk_size
   }
@@ -72,10 +72,10 @@ resource "proxmox_virtual_environment_vm" "vm" {
       }
     }
 
-    user_account {
-      username = var.ssh_user
-      keys     = var.ssh_public_keys
-    }
+    # user_account {
+    #   username = var.ssh_user
+    #   keys     = var.ssh_public_keys
+    # }
   }
 
   lifecycle {

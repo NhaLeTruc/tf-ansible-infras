@@ -91,12 +91,12 @@ variable "ip_gateway" {
   }
 }
 
-variable "ssh_user" {
-  type        = string
-  description = "SSH user"
-}
+# variable "ssh_user" {
+#   type        = string
+#   description = "SSH user"
+# }
 
-variable "ssh_public_keys" {
-  type        = list(string)
-  description = "List of public SSH keys"
-}
+# variable "ssh_public_keys" {
+#   type        = list(string)
+#   description = "List of public SSH keys"
+# }

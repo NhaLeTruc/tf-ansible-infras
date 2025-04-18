@@ -26,8 +26,8 @@ module "masters" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
-  ssh_user        = var.ssh_user
-  ssh_public_keys = [file(var.ssh_public_key_file)]
+  # ssh_user        = var.ssh_user
+  # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
 ############################################
@@ -58,8 +58,8 @@ module "workers" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
-  ssh_user        = var.ssh_user
-  ssh_public_keys = [file(var.ssh_public_key_file)]
+  # ssh_user        = var.ssh_user
+  # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
 ############################################
@@ -90,8 +90,8 @@ module "balancers" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
-  ssh_user        = var.ssh_user
-  ssh_public_keys = [file(var.ssh_public_key_file)]
+  # ssh_user        = var.ssh_user
+  # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
 ############################################
@@ -122,8 +122,8 @@ module "pgbackrest" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
-  ssh_user        = var.ssh_user
-  ssh_public_keys = [file(var.ssh_public_key_file)]
+  # ssh_user        = var.ssh_user
+  # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
 
 ############################################
@@ -156,7 +156,6 @@ resource "local_file" "tf_ansible_inventory_file" {
 %{for vm in var.masters~}
 ${split("/", vm.ip_address)[0]}
 %{endfor~}
-
 %{for vm in var.servers~}
 ${split("/", vm.ip_address)[0]}
 %{endfor~}
