@@ -16,6 +16,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   node_name = var.target_node
   on_boot   = var.onboot
   started   = var.started
+  stop_on_destroy = true
 
   agent {
     type = "virtio"
@@ -31,13 +32,14 @@ resource "proxmox_virtual_environment_vm" "vm" {
   }
 
   disk {
-    interface    = "scsi"
+    interface    = "scsi0"
     datastore_id = var.disk_datastore
     size         = var.disk_size
   }
 
   memory {
     dedicated = var.memory
+    floating  = var.memory
   }
 
   network_device {
@@ -54,11 +56,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
     datastore_id = var.disk_datastore
     vm_id        = var.clone_template_id
     retries      = 3
-  }
-
-  vga {
-    memory  = 16
-    type    = "serial0"
+    full         = true
   }
 
   initialization {
@@ -78,12 +76,12 @@ resource "proxmox_virtual_environment_vm" "vm" {
     # }
   }
 
-  lifecycle {
-    ignore_changes = [
-      # temp fix for SSH keys
-      # https://github.com/bpg/terraform-provider-proxmox/issues/373
-      initialization[0].user_account
-    ]
-  }
+  # lifecycle {
+  #   ignore_changes = [
+  #     # temp fix for SSH keys
+  #     # https://github.com/bpg/terraform-provider-proxmox/issues/373
+  #     initialization[0].user_account
+  #   ]
+  # }
 
 }
