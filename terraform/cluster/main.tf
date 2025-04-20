@@ -26,6 +26,7 @@ module "masters" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
+  # Template already have ssh key. Ajust as needed
   # ssh_user        = var.ssh_user
   # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
@@ -58,6 +59,7 @@ module "workers" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
+  # Template already have ssh key. Ajust as needed
   # ssh_user        = var.ssh_user
   # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
@@ -90,6 +92,7 @@ module "balancers" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
+  # Template already have ssh key. Ajust as needed
   # ssh_user        = var.ssh_user
   # ssh_public_keys = [file(var.ssh_public_key_file)]
 }
@@ -122,6 +125,7 @@ module "pgbackrest" {
   ip_address = each.value.ip_address
   ip_gateway = var.ip_gateway
 
+  # Template already have ssh key. Ajust as needed
   # ssh_user        = var.ssh_user
   # ssh_public_keys = [file(var.ssh_public_key_file)]
 }

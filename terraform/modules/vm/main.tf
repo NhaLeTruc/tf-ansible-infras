@@ -69,7 +69,8 @@ resource "proxmox_virtual_environment_vm" "vm" {
         gateway = var.ip_gateway
       }
     }
-
+    
+    # Template already have ssh key. Ajust as needed
     # user_account {
     #   username = var.ssh_user
     #   keys     = var.ssh_public_keys

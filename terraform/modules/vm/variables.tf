@@ -91,6 +91,7 @@ variable "ip_gateway" {
   }
 }
 
+# Template already have ssh key. Ajust as needed
 # variable "ssh_user" {
 #   type        = string
 #   description = "SSH user"

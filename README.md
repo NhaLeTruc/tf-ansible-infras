@@ -186,7 +186,7 @@ ansible-playbook remove_cluster.yml -e "remove_postgres=true remove_etcd=true"
 This command will delete the specified components, allowing you to start a new installation from scratch.
 :warning: **Caution:** be careful when running this command in a production environment.
 
-# Getting Started with Homelab
+## Getting Started with Homelab
 
 Tested on 11th March 2025 Proxmox server.
 
@@ -272,3 +272,9 @@ terraform providers
 
 terraform -upgrade
 ```
+
+## Packer have been moved to separated repository
+
+Terraform is responsible for creating the vm needed for the cluster.
+
+Ansible handles the heavy lifting of setting up and configurating Postgres HA cluster.

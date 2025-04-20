@@ -12,11 +12,6 @@ variable "template_id" {
   description = "Template ID to clone"
 }
 
-# variable "new_vm_id" {
-#   type = number
-#   default = 100
-# }
-
 variable "tags" {
   type        = list(string)
   description = "VM tags"
@@ -47,6 +42,7 @@ variable "disk_datastore" {
   default     = "volumes"
 }
 
+# Template already have ssh key. Ajust as needed
 # variable "ssh_user" {
 #   type        = string
 #   description = "SSH user"
@@ -133,4 +129,9 @@ variable "backups" {
 #     "masters" = 1
 #     "workers"  = 2
 #   }
+# }
+
+# variable "new_vm_id" {
+#   type = number
+#   default = 100
 # }
