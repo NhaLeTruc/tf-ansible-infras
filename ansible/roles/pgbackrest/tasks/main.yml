@@ -22,7 +22,7 @@
       retries: 3
 
     - name: Add pgdg repository and signing key
-      ansible.builtin.deb822_repository:
+      ansible.legacy.deb822_repository:
         name: "{{ pgbackrest_repo_name | default('apt-postgresql-org') }}"
         types: [deb]
         uris: "https://apt.postgresql.org/pub/repos/apt/"
