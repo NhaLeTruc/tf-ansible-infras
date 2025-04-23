@@ -13,7 +13,7 @@
       retries: 3
 
     - name: Add pgdg repository and signing key
-      ansible.builtin.deb822_repository:
+      ansible.legacy.deb822_repository:
         name: "{{ pg_probackup_repo_name | default('pg_probackup') }}"
         types: [deb]
         uris: "http://repo.postgrespro.ru/pg_probackup/deb/"

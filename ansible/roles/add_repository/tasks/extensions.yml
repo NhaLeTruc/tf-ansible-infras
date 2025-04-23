@@ -5,7 +5,7 @@
 - block:
     # Debian based
     - name: Add TimescaleDB repository
-      ansible.builtin.deb822_repository:
+      ansible.legacy.deb822_repository:
         name: "timescaledb"
         types: [deb]
         uris: "https://packagecloud.io/timescale/timescaledb/{{ ansible_distribution | lower }}" # amd64 and arm64 are supported
@@ -33,7 +33,7 @@
 - block:
     # Debian based
     - name: Add Citus repository
-      ansible.builtin.deb822_repository:
+      ansible.legacy.deb822_repository:
         name: "citusdata"
         types: [deb]
         uris: "https://repos.citusdata.com/community/{{ ansible_distribution | lower }}/" # no arm64 support (TODO)
