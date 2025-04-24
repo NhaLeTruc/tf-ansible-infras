@@ -188,7 +188,7 @@ This command will delete the specified components, allowing you to start a new i
 
 ## Getting Started with Homelab
 
-Tested on 11th March 2025 Proxmox server.
+Tested on 24th April 2025 Proxmox server.
 
 ## Install requirements
 
@@ -278,3 +278,34 @@ terraform -upgrade
 Terraform is responsible for creating the vm needed for the cluster.
 
 Ansible handles the heavy lifting of setting up and configurating Postgres HA cluster.
+
+## Terraform IaC
+
+Packer template has ssh key installed in them. Specifies ssh access in terraform code created issue of ssh acess sometimes.
+
+Be mindful of choosing static ips for VM. Some local ips could have been taken by other service/servers.
+
+```hcl
+clone {
+  datastore_id = var.disk_datastore
+  vm_id        = var.clone_template_id
+  retries      = 3
+  full         = true
+}
+```
+
+Clone `full = true` is very important. Keep this option on.
+
+## Add files for ansible-core 2.14.18 to work instead of 2.16+
+
+Some code needed to be added into project for ansible to work.
+
++ `.\ansible\module_utils\common\file.py`
++ `.\ansible\module_utils\urls.py`
+
+Researches here:
+
+1. [Add local module](https://docs.ansible.com/ansible/latest/dev_guide/developing_locally.html#adding-a-module-or-plugin-outside-of-a-collection)
+2. [Add local module_utils](https://docs.ansible.com/ansible/latest/dev_guide/developing_module_utilities.html)
+3. [deb822_repository module](https://github.com/ansible/ansible/blob/devel/lib/ansible/modules/deb822_repository.py)
+4. [urls module_utils](https://github.com/ansible/ansible/blob/devel/lib/ansible/module_utils/urls.py)
