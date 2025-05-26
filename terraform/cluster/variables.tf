@@ -97,6 +97,19 @@ variable "servers" {
   default = []
 }
 
+variable "dcs" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
 variable "balancers" {
   type = list(object({
     name       = string
