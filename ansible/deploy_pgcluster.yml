@@ -1,9 +1,10 @@
 ---
 - name: Deploy PostgreSQL HA Cluster (based on "Patroni")
-  hosts: localhost
-  gather_facts: true
+  hosts: localhost # First, run tasks on the Ansible control node itself (often localhost)
+  gather_facts: true # Collect information about the control node
   any_errors_fatal: true
-  pre_tasks:
+  pre_tasks: 
+  # Tasks that run *before* any roles on localhost
     - name: Include main variables
       ansible.builtin.include_vars: "roles/common/defaults/main.yml"
       tags: always
@@ -20,6 +21,7 @@
         - pgbackrest_auto_conf | default(true) | bool # to be able to disable auto backup settings
       tags: always
   roles:
+  # Roles that run on localhost (e.g., setting up cloud resources if needed)
     - role: cloud_resources
       when: cloud_provider | default('') | length > 0
       tags: always
@@ -210,7 +212,7 @@
       when: tls_cert_generate | bool
 
 - name: deploy_pgcluster.yml | Deploy etcd cluster
-  ansible.builtin.import_playbook: etcd_cluster.yml
+  ansible.builtin.import_playbook: etcd_cluster.yml # Import/run another playbook
   when: not dcs_exists|bool and dcs_type == "etcd"
   tags: etcd
 
