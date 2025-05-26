@@ -270,7 +270,7 @@ sequenceDiagram
 
     AutomationEngine->>DatabaseServer1: Start Play 8 (hosts: postgres_cluster) - Connect via SSH
     AutomationEngine->>DatabaseServer2: Start Play 8 (hosts: postgres_cluster) - Connect via SSH
-    Note over AutomationEngine, DatabaseServer2: Run Patroni, PgBouncer, backup roles; create users/dbs (conditionally)
+    Note over AutomationEngine, DatabaseServer2: Run Patroni, PgBouncer, backup roles, create users/dbs (conditionally)
     DatabaseServer1-->AutomationEngine: Task results
     DatabaseServer2-->AutomationEngine: Task results
     Note over AutomationEngine: Run final tasks
