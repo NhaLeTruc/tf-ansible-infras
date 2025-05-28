@@ -205,25 +205,23 @@ ${split("/", vm.ip_address)[0]}
 #10.128.64.140 # balancer_tags="datacenter=dc1"
 #10.128.64.145 # balancer_tags="datacenter=dc2" new_node=true
 %{for vm in var.balancers~}
-${split("/", vm.ip_address)[0]}
+${split("/", vm.ip_address)[0]} balancer_tags="datacenter=dc1"
 %{endfor~}
 
 # PostgreSQL nodes
 [master]
 #10.128.64.140 hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
 %{for vm in var.masters~}
-${split("/", vm.ip_address)[0]} hostname=pgnode01 postgresql_exists=false # patroni_tags="datacenter=dc1"
+${split("/", vm.ip_address)[0]} hostname=pgnode${vm.id} postgresql_exists=false patroni_tags="datacenter=dc1"
 %{endfor~}
 
 [replica]
 #10.128.64.142 hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
-%{for vm in var.servers~}
-${split("/", vm.ip_address)[0]} hostname=pgnode02 postgresql_exists=false # patroni_tags="datacenter=dc1"
-%{endfor~}
 #10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
-
 #10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
-
+%{for vm in var.servers~}
+${split("/", vm.ip_address)[0]} hostname=pgnode${vm.id} postgresql_exists=false patroni_tags="datacenter=dc1"
+%{endfor~}
 
 [postgres_cluster:children]
 master
