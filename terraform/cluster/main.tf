@@ -73,7 +73,7 @@ module "dcs" {
     for idx, vm in var.dcs : idx + 1 => vm
   }
 
-  hostname    = "worker-${each.key}"
+  hostname    = "dcs-${each.key}"
   vmid        = each.value.id
   tags        = var.tags
   target_node = var.target_node
