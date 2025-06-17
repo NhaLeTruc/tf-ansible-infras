@@ -1,0 +1,25 @@
+---
+common_local_cache_path: ""
+common_binaries: []
+common_binary_name: "{{ _common_binary_basename }}"
+common_binary_install_dir:
+common_config_dir: ""
+common_binary_url: ""
+common_checksums_url: ""
+common_selinux_port: ""
+common_service_name: "{{ _common_parent_role_short_name }}"
+common_system_user: ""
+common_system_group: ""
+common_dependencies: "{% if (ansible_facts['pkg_mgr'] == 'apt') %}\
+                       {{ ('python-apt' if ansible_facts['python_version'] is version('3', '<') else 'python3-apt') }}
+                       {% else %}\
+                       {% endif %}"
+common_binary_unarchive_opts: ""
+common_tls_server_config: {}
+common_http_server_config: {}
+common_basic_auth_users: {}
+common_web_listen_address: ""
+# Variables that should not be overwritten
+_common_binary_basename: "{{ common_binary_url | urlsplit('path') | basename }}"
+_common_github_api_headers: "{{ {'GITHUB_TOKEN': lookup('ansible.builtin.env', 'GITHUB_TOKEN')} if (lookup('ansible.builtin.env', 'GITHUB_TOKEN')) else {} }}"
+_common_parent_role_short_name: "{{ ansible_parent_role_names | first | regex_replace(ansible_collection_name ~ '.', '') }}"

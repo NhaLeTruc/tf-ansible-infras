@@ -1,0 +1,18 @@
+---
+# vars/             #
+#     main.yml      #  <-- variables associated with this role
+# defaults/         #
+#     main.yml      #  <-- default lower priority variables for this role
+#
+# what to put in vars: System-specific constants that don't change much. So you can have vars/debian.yml and vars/centos.yml with the same variable names but different values and include them conditionally.
+_prometheus_go_ansible_arch: "{{ {'i386': '386',
+                              'x86_64': 'amd64',
+                              'aarch64': 'arm64',
+                              'armv7l': 'armv7',
+                              'armv6l': 'armv6'}.get(ansible_facts['architecture'], ansible_facts['architecture']) }}"
+
+_prometheus_repo: "prometheus/prometheus"
+_github_api_headers: "{{ {'GITHUB_TOKEN': lookup('ansible.builtin.env', 'GITHUB_TOKEN')} if (lookup('ansible.builtin.env', 'GITHUB_TOKEN')) else {} }}"
+_prometheus_binaries:
+  - prometheus
+  - promtool
