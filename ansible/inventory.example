@@ -42,6 +42,15 @@
 #10.128.64.144 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" patroni_replicatefrom="pgnode03"
 #10.128.64.145 hostname=pgnode04 postgresql_exists=false # patroni_tags="datacenter=dc2" new_node=true
 
+[prometheus]
+# 192.168.1.23
+
+[grafana]
+# 192.168.1.23
+
+[postgres_exporter]
+# 192.168.1.11
+
 [postgres_cluster:children]
 master
 replica

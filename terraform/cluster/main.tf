@@ -223,6 +223,21 @@ ${split("/", vm.ip_address)[0]} hostname=pgnode${vm.id} postgresql_exists=false 
 ${split("/", vm.ip_address)[0]} hostname=pgnode${vm.id} postgresql_exists=false patroni_tags="datacenter=dc1"
 %{endfor~}
 
+[prometheus]
+%{for vm in var.monitors~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
+
+[grafana]
+%{for vm in var.monitors~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
+
+[postgres_exporter]
+%{for vm in var.masters~}
+${split("/", vm.ip_address)[0]}
+%{endfor~}
+
 [postgres_cluster:children]
 master
 replica
