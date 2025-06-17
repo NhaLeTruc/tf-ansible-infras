@@ -136,6 +136,19 @@ variable "backups" {
   default = []
 }
 
+variable "monitors" {
+  type = list(object({
+    name       = string
+    id         = number
+    cores      = number
+    sockets    = number
+    memory     = number
+    disk_size  = number
+    ip_address = string
+  }))
+  default = []
+}
+
 # variable "node_count" {
 #   type = map(string)
 #   default = {
