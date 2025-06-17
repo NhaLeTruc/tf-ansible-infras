@@ -464,3 +464,76 @@
       run_once: true # noqa run-once
       when: post_deploy_command | default('') | length > 0
       tags: post_deploy, post_deploy_command
+
+- name: deploy_prometheus.yml | Deploy Prometheus
+  hosts: prometheus
+  become: true
+  become_method: sudo
+  gather_facts: true
+  any_errors_fatal: true
+  environment: "{{ proxy_env | default({}) }}"
+
+  pre_tasks:
+    - name: Include main variables
+      ansible.builtin.include_vars: "roles/common/defaults/main.yml"
+      tags: always
+
+    - name: Include system variables
+      ansible.builtin.include_vars: "roles/common/defaults/system.yml"
+      tags: always
+
+    - name: Include OS-specific variables
+      ansible.builtin.include_vars: "roles/common/defaults/{{ ansible_os_family }}.yml"
+      tags: always
+
+  roles:
+    - role: prometheus
+
+- name: deploy_prometheus.yml | Deploy Postgres Exporter
+  hosts: postgres_exporter
+  become: true
+  become_method: sudo
+  gather_facts: true
+  any_errors_fatal: true
+  environment: "{{ proxy_env | default({}) }}"
+
+  pre_tasks:
+    - name: Include main variables
+      ansible.builtin.include_vars: "roles/common/defaults/main.yml"
+      tags: always
+
+    - name: Include system variables
+      ansible.builtin.include_vars: "roles/common/defaults/system.yml"
+      tags: always
+
+    - name: Include OS-specific variables
+      ansible.builtin.include_vars: "roles/common/defaults/{{ ansible_os_family }}.yml"
+      tags: always
+
+  roles:
+    - role: postgres_exporter
+
+- name: deploy_prometheus.yml | Deploy Grafana
+  hosts: grafana
+  become: true
+  become_method: sudo
+  gather_facts: true
+  any_errors_fatal: true
+  environment: "{{ proxy_env | default({}) }}"
+
+  pre_tasks:
+    - name: Include main variables
+      ansible.builtin.include_vars: "roles/common/defaults/main.yml"
+      tags: always
+
+    - name: Include system variables
+      ansible.builtin.include_vars: "roles/common/defaults/system.yml"
+      tags: always
+
+    - name: Include OS-specific variables
+      ansible.builtin.include_vars: "roles/common/defaults/{{ ansible_os_family }}.yml"
+      tags: always
+
+  roles:
+    - role: grafana
+    
