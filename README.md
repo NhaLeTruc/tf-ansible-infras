@@ -155,7 +155,7 @@ ansible all -m ping -u debian
 7. Run playbook:
 
 ```bash
-ansible-playbook -e @secrets.enc deploy_pgcluster.yml
+ansible-playbook -e @secret.enc deploy_pgcluster.yml
 ```
 
 #### Deploy Cluster with TimescaleDB
