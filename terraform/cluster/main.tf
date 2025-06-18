@@ -164,6 +164,39 @@ module "pgbackrest" {
 }
 
 ############################################
+## backup and restore
+############################################
+module "monitors" {
+  source = "../modules/vm"
+  for_each = {
+    for idx, vm in var.monitors : idx + 1 => vm
+  }
+
+  hostname    = "monitor-${each.key}"
+  vmid        = each.value.id
+  tags        = var.tags
+  target_node = var.target_node
+
+  clone_template_id = var.template_id
+  onboot            = var.onboot
+  started           = var.started
+
+  cores   = each.value.cores
+  sockets = each.value.sockets
+  memory  = each.value.memory
+
+  disk_size      = each.value.disk_size
+  disk_datastore = var.disk_datastore
+
+  ip_address = each.value.ip_address
+  ip_gateway = var.ip_gateway
+
+  # Template already have ssh key. Ajust as needed
+  # ssh_user        = var.ssh_user
+  # ssh_public_keys = [file(var.ssh_public_key_file)]
+}
+
+############################################
 ## ansible_inventory
 ############################################
 resource "local_file" "tf_ansible_inventory_file" {
