@@ -154,6 +154,41 @@ ansible all -m ping -u debian
 
 7. Run playbook:
 
+Manual fix for dpkg issue. Should add into ansible playbook for monitor server.
+
+If error is dpkg can't be updated, go with this:
+
+```bash
+ssh debian@192.168.1.21
+
+sudo rm -rf /var/lib/dpkg/updates/* && sudo dpkg --configure -a
+```
+
+If error is dpkg can't be updated, go with this:
+
+```bash
+lsof /var/lib/dpkg/lock
+
+ps cax | grep <PID>
+
+sudo dpkg --configure -a
+```
+
+If the above doesn't work, go with this:
+
+```bash
+lsof /var/lib/dpkg/lock
+
+ps cax | grep <PID>
+
+sudo rm /var/lib/dpkg/lock
+
+sudo dpkg --configure -a
+```
+
+
+Once fixed continue with:
+
 ```bash
 ansible-playbook -e @secret.enc deploy_pgcluster.yml
 ```
