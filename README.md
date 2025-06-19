@@ -338,6 +338,40 @@ Some code needed to be added into project for ansible to work.
 + `.\ansible\module_utils\common\file.py`
 + `.\ansible\module_utils\urls.py`
 
+## proxmox command stop/start multiple vms
+
+```bash
+# First time only
+apt-get update && apt-get install parallel
+
+# Generate file with all related VM IDs
+seq 200 210 >> vm_list.txt
+
+# Stop all VMs
+cat vm_list.txt | parallel -j 11 qm stop {}
+
+# Start all VMs
+cat vm_list.txt | parallel -j 11 qm start {}
+```
+
+## Resize Proxmox VM disk size
+
+To increase the size of a virtual machine's disk in Proxmox, you need to resize the disk within the Proxmox GUI and then expand the partition and filesystem inside the guest operating system. First, shut down the VM and resize the disk using the Proxmox web interface, then start the VM and use tools within the guest OS to expand the partition and filesystem to utilize the newly allocated space.
+
+Steps to resize a Proxmox VM disk:
+
+1. Shut down the VM: Before resizing, ensure the virtual machine is powered off.
+2. Navigate to the VM's hardware settings: In the Proxmox web interface, select the VM, go to the "Hardware" tab, and choose the hard disk you want to resize.
+3. Resize the disk: Click on "Disk Actions" and then "Resize".
+4. Enter the new size: Specify the desired new size for the disk.
+5. Start the VM: Power on the virtual machine.
+6. Expand the partition and filesystem (within the guest OS): Use tools like gparted, parted, or commands specific to your guest OS (e.g., resize2fs for ext4, xfs_growfs for xfs) to expand the partition and filesystem to use the newly allocated disk space.
+7. Verify the change: Check the storage settings within the guest OS to confirm the increased disk size.
+
+> If your VM uses LVM or ZFS, you'll need to use specific commands (e.g., lvresize for LVM) to expand the logical volume or ZFS volume.
+> Always back up your VM before resizing the disk, especially if you are working with LVM or ZFS. 
+> How you expand the partition and filesystem within the guest OS depends on the guest OS and its partitioning scheme (e.g., LVM, ZFS, separate /home partition).
+
 Researches here:
 
 1. [Add local module](https://docs.ansible.com/ansible/latest/dev_guide/developing_locally.html#adding-a-module-or-plugin-outside-of-a-collection)
