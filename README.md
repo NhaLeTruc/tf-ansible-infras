@@ -159,33 +159,12 @@ Manual fix for dpkg issue. Should add into ansible playbook for monitor server.
 If error is dpkg can't be updated, go with this:
 
 ```bash
-ssh debian@192.168.1.21
+ssh debian@192.168.1.XX
+
+lsof /var/lib/dpkg/updates/
 
 sudo rm -rf /var/lib/dpkg/updates/* && sudo dpkg --configure -a
 ```
-
-If error is dpkg can't be updated, go with this:
-
-```bash
-lsof /var/lib/dpkg/lock
-
-ps cax | grep <PID>
-
-sudo dpkg --configure -a
-```
-
-If the above doesn't work, go with this:
-
-```bash
-lsof /var/lib/dpkg/lock
-
-ps cax | grep <PID>
-
-sudo rm /var/lib/dpkg/lock
-
-sudo dpkg --configure -a
-```
-
 
 Once fixed continue with:
 
@@ -366,7 +345,28 @@ Steps to resize a Proxmox VM disk:
 4. Enter the new size: Specify the desired new size for the disk.
 5. Start the VM: Power on the virtual machine.
 6. Expand the partition and filesystem (within the guest OS): Use tools like gparted, parted, or commands specific to your guest OS (e.g., resize2fs for ext4, xfs_growfs for xfs) to expand the partition and filesystem to use the newly allocated disk space.
+   1. backup the system
+   2. disable swap
+   3. remove swap
+   4. remove extended partition
+   5. resize /dev/sda1 (disk size - wanted swap size)
+   6. create new swap partition /dev/sda2 or on extended
+   7. resize2fs /dev/sda1
+   8. mkswap on swap partition
+   9. add swap partition to /etc/fstab
 7. Verify the change: Check the storage settings within the guest OS to confirm the increased disk size.
+
+> This is the last resort, not reccommended. Scale horizontally!
+
+```bash
+# View disk infos
+lsblk
+df -h
+
+# Install disk management tool
+sudo apt install lvm2
+
+```
 
 > If your VM uses LVM or ZFS, you'll need to use specific commands (e.g., lvresize for LVM) to expand the logical volume or ZFS volume.
 > Always back up your VM before resizing the disk, especially if you are working with LVM or ZFS. 
