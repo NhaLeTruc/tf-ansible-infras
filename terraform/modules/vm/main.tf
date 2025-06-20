@@ -31,8 +31,16 @@ resource "proxmox_virtual_environment_vm" "vm" {
     sockets = var.sockets
   }
 
+  # boot disk
   disk {
     interface    = "scsi0"
+    datastore_id = var.disk_datastore
+    size         = 15
+  }
+
+  # extend disk
+  disk {
+    interface    = "virtio0"
     datastore_id = var.disk_datastore
     size         = var.disk_size
   }
