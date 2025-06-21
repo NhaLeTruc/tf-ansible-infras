@@ -331,6 +331,9 @@ cat vm_list.txt | parallel -j 11 qm stop {}
 
 # Start all VMs
 cat vm_list.txt | parallel -j 11 qm start {}
+
+# Remove all VMs whose ID is in vm_list.txt
+cat vm_list.txt | parallel -j 11 qm destroy {}
 ```
 
 ## Resize Proxmox VM disk size
