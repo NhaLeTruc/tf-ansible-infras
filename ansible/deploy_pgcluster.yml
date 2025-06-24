@@ -101,7 +101,7 @@
       when: ansible_os_family == "Debian"
 
     - name: Check whether dpkg locks are open
-      ansible.builtin.shell: lsof /var/lib/dpkg/lock && lsof /var/lib/dpkg/lock-frontend
+      ansible.builtin.command: lsof /var/lib/dpkg/lock
       register: dpkg_lock_result
       util:
         - dpkg_lock_result.stdout == ""

@@ -7,10 +7,10 @@ variable "proxmox_api_token_id" {
   sensitive = true
 }
 
-variable "template_id" {
-  type        = number
-  description = "Template ID to clone"
-}
+# variable "template_id" {
+#   type        = number
+#   description = "Template ID to clone"
+# }
 
 variable "tags" {
   type        = list(string)
@@ -73,78 +73,84 @@ variable "target_node" {
 
 variable "masters" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }
 
 variable "servers" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }
 
 variable "dcs" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }
 
 variable "balancers" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }
 
 variable "backups" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }
 
 variable "monitors" {
   type = list(object({
-    name       = string
-    id         = number
-    cores      = number
-    sockets    = number
-    memory     = number
-    disk_size  = number
-    ip_address = string
+    name        = string
+    id          = number
+    template_id = number
+    cores       = number
+    sockets     = number
+    memory      = number
+    # disk_size   = number
+    ip_address  = string
   }))
   default = []
 }

@@ -31,12 +31,12 @@ resource "proxmox_virtual_environment_vm" "vm" {
     sockets = var.sockets
   }
 
-  disk {
-    interface    = "scsi0"
-    file_format  = "raw"
-    datastore_id = var.disk_datastore
-    size         = var.disk_size
-  }
+  # disk {
+  #   interface    = "scsi0"
+  #   file_format  = "raw"
+  #   datastore_id = var.disk_datastore
+  #   size         = var.disk_size
+  # }
 
   memory {
     dedicated = var.memory

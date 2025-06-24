@@ -57,15 +57,15 @@ variable "memory" {
   default     = 1024
 }
 
-variable "disk_size" {
-  type        = number
-  description = <<EOT
-  (Optional) VM bootdisk size in GB
+# variable "disk_size" {
+#   type        = number
+#   description = <<EOT
+#   (Optional) VM bootdisk size in GB
 
-  Default: 10
-  EOT
-  default     = 10
-}
+#   Default: 10
+#   EOT
+#   default     = 10
+# }
 
 variable "disk_datastore" {
   type        = string

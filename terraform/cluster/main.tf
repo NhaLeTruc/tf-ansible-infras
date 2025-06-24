@@ -12,7 +12,7 @@ module "masters" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -20,7 +20,7 @@ module "masters" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -45,7 +45,7 @@ module "workers" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -53,7 +53,7 @@ module "workers" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -78,7 +78,7 @@ module "dcs" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -86,7 +86,7 @@ module "dcs" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -111,7 +111,7 @@ module "balancers" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -119,7 +119,7 @@ module "balancers" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -144,7 +144,7 @@ module "pgbackrest" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -152,7 +152,7 @@ module "pgbackrest" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -177,7 +177,7 @@ module "monitors" {
   tags        = var.tags
   target_node = var.target_node
 
-  clone_template_id = var.template_id
+  clone_template_id = each.value.template_id
   onboot            = var.onboot
   started           = var.started
 
@@ -185,7 +185,7 @@ module "monitors" {
   sockets = each.value.sockets
   memory  = each.value.memory
 
-  disk_size      = each.value.disk_size
+  # disk_size      = each.value.disk_size
   disk_datastore = var.disk_datastore
 
   ip_address = each.value.ip_address
@@ -313,7 +313,7 @@ EOF
 #   vm_id = var.new_vm_id + count.index
 
 #   clone {
-#     vm_id = var.template_id
+#     vm_id = each.value.template_id
 #     full = true
 #     retries = 3
 #   }
