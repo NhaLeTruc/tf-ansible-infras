@@ -103,8 +103,7 @@
     - name: Check whether dpkg locks are open
       ansible.builtin.command: lsof /var/lib/dpkg/lock
       register: dpkg_lock_result
-      util:
-        - dpkg_lock_result.stdout == ""
+      until: dpkg_lock_result.stdout == ""
       ignore_errors: true
       delay: 5
       retries: 3
